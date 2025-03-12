@@ -37,8 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',  # Add this line
-    'api',  # Your API app
+    'rest_framework',
+    'api',  # API app
 ]
 
 MIDDLEWARE = [
@@ -79,6 +79,14 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
+    },
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'ecommerce_db',
+        'USER': 'root',
+        'PASSWORD': 'senha123',
+        'HOST': 'localhost',
+        'PORT': '3306',
     }
 }
 
@@ -123,3 +131,9 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MONGO_DB = {
+    'HOST': 'localhost',
+    'PORT': 27017,
+    'NAME': 'nome_do_banco'
+}
