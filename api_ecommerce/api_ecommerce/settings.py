@@ -127,3 +127,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MIGRATION_MODULES = {
+    # Desabilita criação de tabelas default na DB relacional.
+
+    'auth': None,         
+    'contenttypes': None,  
+    'sessions': None,      
+    'admin': None,         
+}
