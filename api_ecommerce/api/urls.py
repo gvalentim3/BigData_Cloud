@@ -1,8 +1,8 @@
 from django.urls import path
-from api.views import listar_produtos, buscar_produto, criar_pedido # Import the view from views.py
+from api.views import user_detail, address_detail, credit_card_detail # Import the view from views.py
 
 urlpatterns = [
-    path('produtos/', listar_produtos, name='listar_produtos'),
-    path('produtos/<int:produto_id>/', buscar_produto, name='buscar_produto'),
-    path('pedidos/', criar_pedido, name='criar_pedido'),
+    path('user/<int:user_id>/', user_detail, name='user_detail'),
+    path('user/<int:user_id>/address/', address_detail(), name='address_detail'),
+    path('user/<int:user_id>/credit_card/', credit_card_detail, name='credit_card_detail'),
 ]
