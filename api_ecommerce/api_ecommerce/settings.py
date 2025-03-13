@@ -37,8 +37,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',  # Add this line
-    'api',  # Your API app
+    'rest_framework',
+    'api',  # API app
 ]
 
 MIDDLEWARE = [
@@ -127,3 +127,12 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+MIGRATION_MODULES = {
+    # Desabilita criação de tabelas default na DB relacional.
+
+    'auth': None,         
+    'contenttypes': None,  
+    'sessions': None,      
+    'admin': None,         
+}
