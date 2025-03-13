@@ -10,7 +10,7 @@ class Usuario (models.Model):
     telefone = models.CharField(max_length=11)
     
     def __str__(self):
-        return self.title
+        return self.nome
     
 class Endereco (models.Model):
     logradouro = models.CharField(max_length=50)
@@ -19,6 +19,14 @@ class Endereco (models.Model):
     cidade = models.CharField(max_length=30)
     estado = models.CharField(max_length=30)
     cep = models.CharField(max_length=8)
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+
+class Cartao (models.Model):
+    numero = models.CharField(max_length=16)
+    validade = models.DateField
+    cvv = models.CharField(max_length=3)
+    saldo = models.DecimalField(max_digits=10, decimal_places=2)
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
 
 class Produto(models.Model):
     nome = models.CharField(max_length=255)
