@@ -24,6 +24,9 @@ class Endereco (models.Model):
     cep = models.CharField(max_length=8)
     id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
 
+    class Meta:
+        db_table = 'endereco'
+
 class Cartao (models.Model):
     numero = models.CharField(max_length=16)
     validade = models.DateField

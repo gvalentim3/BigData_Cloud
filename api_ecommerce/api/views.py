@@ -1,14 +1,27 @@
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import api_view
-from api.models import Usuario, Endereco
 from django.views import View
-from api.serializers import ProdutoSerializer, PedidoSerializer
+from api.serializers import UsuarioSerializer
 # Criar requisições
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from .models import User, Address, CreditCard
+from .models import Usuario, Endereco, Cartao
 import json
 
+
+class UsuarioView(APIView):
+    # List all users
+    def get(self, request):
+        usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
+        serializer = UsuarioSerializer(usuarios, many=True)
+        return Response(serializer.data)
+
+"""
+class UsuarioView():
+    def getAll(self, request):
+        products = Usuario.objects.all()
+        return render(request, 'products/list.html', {'products': products})
 
 def user_detail(request, user_id):
     user = get_object_or_404(User, id=user_id)
@@ -67,4 +80,5 @@ def credit_card_detail(request, user_id):
             expiration_date=data['expiration_date'],
             cvv=data['cvv'],
         )
-        return JsonResponse({'status': 'success', 'card_id': card.id}, status=201)
+        return JsonResponse({'status': 'success', 'card_id': card.id}, status=201)"
+"""
