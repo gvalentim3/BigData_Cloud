@@ -12,12 +12,13 @@ class CartaoSerializer(serializers.ModelSerializer):
         fields = ['numero', 'validade', 'cvv', 'saldo']
 
 class UsuarioSerializer (serializers.ModelSerializer):
-    cartoes = CartaoSerializer(many=True, read_only=True)
-    enderecos = EnderecoSerializer(many=True, read_only=True)
+    #cartoes = CartaoSerializer(many=True, read_only=True)
+    #enderecos = EnderecoSerializer(many=True, read_only=True)
     
     class Meta:
         model = Usuario
-        fields = ['nome', 'email', 'data_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
+        #fields = ['nome', 'email', 'data_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
+        fields = ['nome', 'email', 'dtNascimento', 'CPF', 'Telefone']
         
 class ProdutoSerializer(serializers.ModelSerializer):
     class Meta:

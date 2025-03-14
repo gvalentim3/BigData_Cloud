@@ -3,11 +3,11 @@ from django.db import models
 # Models são representações das tabelas da nossa DB
 
 class Usuario (models.Model):
-    nome = models.CharField(max_length=100)
-    email = models.CharField(max_length=150)
-    data_nascimento = models.DateField
-    cpf = models.CharField(max_length=11)
-    telefone = models.CharField(max_length=20)
+    nome = models.CharField(max_length=100, null=True)
+    email = models.CharField(max_length=150, null=True)
+    dtNascimento = models.DateTimeField(null=True)
+    CPF = models.CharField(max_length=11, null=True)
+    Telefone = models.CharField(max_length=20, null=True)
     
     def __str__(self):
         return self.nome
@@ -22,7 +22,7 @@ class Endereco (models.Model):
     cidade = models.CharField(max_length=100)
     estado = models.CharField(max_length=100)
     cep = models.CharField(max_length=8)
-    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    #id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
 
     class Meta:
         db_table = 'endereco'
@@ -32,7 +32,7 @@ class Cartao (models.Model):
     validade = models.DateField
     cvv = models.CharField(max_length=3)
     saldo = models.DecimalField(max_digits=10, decimal_places=2)
-    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    #id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
 
 class Produto(models.Model):
     nome = models.CharField(max_length=255)

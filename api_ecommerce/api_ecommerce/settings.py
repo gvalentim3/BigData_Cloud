@@ -81,7 +81,7 @@ DATABASES = {
         'NAME': 'ibmec-cloud-mall',
         'USER': 'root',
         'PASSWORD': 'admin',
-        'HOST': 'localhost',
+        'HOST': '127.0.0.1',
         'PORT': '3306',
     }
 }
@@ -130,7 +130,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MIGRATION_MODULES = {
     # Desabilita criação de tabelas default na DB relacional.
-
+    'api': None,
     'auth': None,         
     'contenttypes': None,  
     'sessions': None,      

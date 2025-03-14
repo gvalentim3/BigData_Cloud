@@ -16,7 +16,13 @@ class UsuarioView(APIView):
         usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
         serializer = UsuarioSerializer(usuarios, many=True)
         return Response(serializer.data)
-
+    
+    def post(self, request):
+        serializer = UsuarioSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 """
 class UsuarioView():
     def getAll(self, request):
