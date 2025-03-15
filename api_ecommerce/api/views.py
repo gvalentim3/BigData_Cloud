@@ -6,7 +6,7 @@ from api.serializers import UsuarioSerializer
 # Criar requisições
 from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
-from .models import Usuario, Endereco, Cartao
+from .models import Usuario, Endereco, CartaoCredito
 import json
 
 

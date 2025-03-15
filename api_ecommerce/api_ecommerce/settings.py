@@ -130,9 +130,5 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 MIGRATION_MODULES = {
     # Desabilita criação de tabelas default na DB relacional.
-    'api': None,
-    'auth': None,         
-    'contenttypes': None,  
-    'sessions': None,      
-    'admin': None,         
+    'api': None,        
 }

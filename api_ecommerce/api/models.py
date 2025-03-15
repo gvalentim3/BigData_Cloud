@@ -3,11 +3,11 @@ from django.db import models
 # Models são representações das tabelas da nossa DB
 
 class Usuario (models.Model):
-    nome = models.CharField(max_length=100, null=True)
-    email = models.CharField(max_length=150, null=True)
-    dtNascimento = models.DateTimeField(null=True)
-    CPF = models.CharField(max_length=11, null=True)
-    Telefone = models.CharField(max_length=20, null=True)
+    nome = models.CharField(max_length=100, null=False, blank=False)
+    email = models.CharField(max_length=150, null=False, blank=False)
+    dt_nascimento = models.DateTimeField(null=False, blank=False)
+    cpf = models.CharField(max_length=11, null=False, blank=False, unique=True)
+    telefone = models.CharField(max_length=20, null=False, blank=False)
     
     def __str__(self):
         return self.nome
@@ -15,25 +15,34 @@ class Usuario (models.Model):
     class Meta:
         db_table = 'usuario'
     
+class TipoEndereco(models.Model):
+    tipo = models.CharField(max_length=45)
+
 class Endereco (models.Model):
-    logradouro = models.CharField(max_length=200)
-    complemento = models.CharField(max_length=200)
-    bairro = models.CharField(max_length=100)
-    cidade = models.CharField(max_length=100)
-    estado = models.CharField(max_length=100)
-    cep = models.CharField(max_length=8)
-    #id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    logradouro = models.CharField(max_length=200, null=False, blank=False)
+    complemento = models.CharField(max_length=200, null=False, blank=True, default="")
+    bairro = models.CharField(max_length=100, null=False, blank=False)
+    cidade = models.CharField(max_length=100, null=False, blank=False)
+    estado = models.CharField(max_length=100, null=False, blank=False)
+    cep = models.CharField(max_length=8, null=False, blank=False)
+    id_usuario_endereco = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
+    id_tp_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos")
 
     class Meta:
         db_table = 'endereco'
 
-class Cartao (models.Model):
-    numero = models.CharField(max_length=16)
-    validade = models.DateField
-    cvv = models.CharField(max_length=3)
-    saldo = models.DecimalField(max_digits=10, decimal_places=2)
-    #id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+class CartaoCredito (models.Model):
+    numero = models.CharField(max_length=45, null=False, blank=False)
+    dt_expiracao = models.DateTimeField(null=False, blank=False)
+    cvv = models.CharField(max_length=3, null=False, blank=False)
+    saldo = models.DecimalField(max_digits=15, decimal_places=2, null=False, blank=False)
+    id_usuario_cartao = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")
 
+    class Meta:
+        db_table = 'cartao_credito'
+
+
+"""
 class Produto(models.Model):
     nome = models.CharField(max_length=255)
     descricao = models.TextField()
@@ -42,6 +51,9 @@ class Produto(models.Model):
 
     def __str__(self):
         return self.nome
+
+
+
 
 class Pedido(models.Model):
     STATUS_CHOICES = [
@@ -58,3 +70,4 @@ class ItemPedido(models.Model):
     pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
     produto = models.ForeignKey(Produto, on_delete=models.CASCADE)
     quantidade = models.IntegerField()
+"""
