@@ -12,17 +12,19 @@ import json
 
 class UsuarioView(APIView):
     # List all users
-    def get(self, request):
-        usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
-        serializer = UsuarioSerializer(usuarios, many=True)
-        return Response(serializer.data)
-    
     def post(self, request):
         serializer = UsuarioSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
+    
+    def get(self, request):
+        usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
+        serializer = UsuarioSerializer(usuarios, many=True)
+        return Response(serializer.data)
+
+
 """
 class UsuarioView():
     def getAll(self, request):

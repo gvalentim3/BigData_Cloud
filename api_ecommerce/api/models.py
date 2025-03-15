@@ -18,6 +18,9 @@ class Usuario (models.Model):
 class TipoEndereco(models.Model):
     tipo = models.CharField(max_length=45)
 
+    class Meta:
+        db_table = 'tipo_endereco'
+
 class Endereco (models.Model):
     logradouro = models.CharField(max_length=200, null=False, blank=False)
     complemento = models.CharField(max_length=200, null=False, blank=True, default="")
