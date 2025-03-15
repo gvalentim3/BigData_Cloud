@@ -1,10 +1,30 @@
-# Django #
-*.log
-*.pot
-*.pyc
-__pycache__
-db.sqlite3
-media
+# Ignore Python compiled files
+__pycache__/
+*.py[cod]
+
+# Ignore Django migrations (except __init__.py)
+*/migrations/*
+!*/migrations/__init__.py
+
+# Ignore environment variables
+.env
+.env.local
+
+# Ignore IDE files
+.idea/
+.vscode/
+
+# Ignore SQLite database
+*.sqlite3
+
+# Ignore static and media files
+/static/
+/media/
+
+# Ignore Python virtual environment
+venv/
+env/
+
 
 # Backup files # 
 *.bak 
