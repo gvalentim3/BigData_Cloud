@@ -18,6 +18,7 @@ class UsuarioSerializer (serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
+        read_only_fields = ['cpf']
 
 """        
 class ProdutoSerializer(serializers.ModelSerializer):

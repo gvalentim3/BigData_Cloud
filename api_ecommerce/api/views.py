@@ -8,21 +8,88 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from .models import Usuario, Endereco, CartaoCredito
 import json
+from rest_framework import status
 
 
 class UsuarioView(APIView):
-    # List all users
     def post(self, request):
         serializer = UsuarioSerializer(data=request.data)
         if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            cpf = serializer.validated_data.get('cpf')
+
+            if Usuario.objects.filter(email=email).exists():
+                return Response(
+                    {'error': 'Este email já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if Usuario.objects.filter(cpf=cpf).exists():
+                return Response(
+                    {'error': 'Este CPF já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
             serializer.save()
-            return Response(serializer.data, status=201)
-        return Response(serializer.errors, status=400)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-    def get(self, request):
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                # Se na requisição é enviado um ID de usuário, programa verifica se existe na base de dados e caso exista, retorna os dados do usuário junto dos de cartão e endereço.
+                usuario = Usuario.objects.prefetch_related('cartoes', 'enderecos').get(pk=pk)
+                serializer = UsuarioSerializer(usuario)
+                return Response(serializer.data)
+            except Usuario.DoesNotExist:
+                return Response(
+                    {'error': 'Usuário não encontrado.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
         usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
         serializer = UsuarioSerializer(usuarios, many=True)
         return Response(serializer.data)
+
+    def patch(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            if Usuario.objects.filter(email=email).exclude(pk=pk).exists():
+                return Response(
+                    {'error': 'Este email já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        """
+        Delete a user by ID.
+        """
+        try:
+            usuario = Usuario.objects.get(pk=pk)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Delete the user
+        usuario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 """
