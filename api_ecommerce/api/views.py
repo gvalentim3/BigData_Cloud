@@ -1,70 +1,168 @@
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from api.models import Usuario, Endereco
-from django.views import View
-from api.serializers import ProdutoSerializer, PedidoSerializer
+from api.serializers import UsuarioSerializer, EnderecoSerializer, CartaoSerializer
 # Criar requisições
-from django.shortcuts import render, get_object_or_404
-from django.http import JsonResponse
-from .models import User, Address, CreditCard
-import json
+from .models import Usuario, Endereco, CartaoCredito
+from rest_framework import status
+from django.db import transaction
+from django.core.exceptions import ValidationError
+
+class UsuarioView(APIView):
+    def post(self, request):
+        user_serializer = UsuarioSerializer(data=request.data)
+        if user_serializer.is_valid():
+            email = user_serializer.validated_data.get('email')
+            cpf = user_serializer.validated_data.get('cpf')
+
+            if Usuario.objects.filter(email=email).exists():
+                return Response(
+                    {'error': 'Este email já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if Usuario.objects.filter(cpf=cpf).exists():
+                return Response(
+                    {'error': 'Este CPF já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            validated_data = user_serializer.validated_data.copy()
+            data_cartoes = validated_data.pop('cartoes')
+            data_enderecos = validated_data.pop('enderecos')            
+
+            try:
+                with transaction.atomic():
+                    usuario = Usuario.objects.create(**validated_data)
+                    
+                    if data_enderecos:
+                        data_enderecos['id_usuario_endereco'] = usuario.id
+                        endereco_serializer = EnderecoSerializer(data=data_enderecos)
+                        if endereco_serializer.is_valid():
+                            endereco_serializer.save()
+                        else:
+                            raise ValidationError(endereco_serializer.errors)
+
+                    if data_cartoes:
+                        data_cartoes['id_usuario_cartao'] = usuario.id
+                        cartao_serializer = CartaoSerializer(data=data_cartoes)
+                        if cartao_serializer.is_valid():
+                            cartao_serializer.save()
+                        else:
+                            raise ValidationError(cartao_serializer.errors)
+                    
+                    return Response(UsuarioSerializer(usuario).data, status=status.HTTP_201_CREATED)
+            except ValidationError as e:
+            # Handle validation errors
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            except Exception as e:
+            # Handle other exceptions
+                return Response({'error': 'Ocorreu um erro ao processar a solicitação.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                # Se na requisição é enviado um ID de usuário, programa verifica se existe na base de dados e caso exista, retorna os dados do usuário junto dos de cartão e endereço.
+                usuario = Usuario.objects.prefetch_related('cartoes', 'enderecos').get(pk=pk)
+                serializer = UsuarioSerializer(usuario)
+                return Response(serializer.data)
+            except Usuario.DoesNotExist:
+                return Response(
+                    {'error': 'Usuário não encontrado.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        usuarios = Usuario.objects.prefetch_related('cartoes', 'enderecos').all()
+        serializer = UsuarioSerializer(usuarios, many=True)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+        if serializer.is_valid():
+            email = serializer.validated_data.get('email')
+            if Usuario.objects.filter(email=email).exclude(pk=pk).exists():
+                return Response(
+                    {'error': 'Este email já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def delete(self, request, pk):
+        try:
+            usuario = Usuario.objects.get(pk=pk)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        usuario.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+class EnderecoView(APIView):
+    def post(self, request):
+        serializer = EnderecoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                # Se na requisição é enviado um ID de endereço, programa verifica se existe na base de dados e caso exista, retorna os dados.
+                endereco = Endereco.objects.get(pk=pk)
+                serializer = EnderecoSerializer(endereco)
+                return Response(serializer.data)
+            except Endereco.DoesNotExist:
+                return Response(
+                    {'error': 'Endereço não encontrado.'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+        
+        enderecos = Endereco.objects.all()
+        serializer = EnderecoSerializer(enderecos, many=True)
+        return Response(serializer.data)
+
+    def patch(self, request, pk):
+        try:
+            endereco = Endereco.objects.get(pk=pk)
+        except Endereco.DoesNotExist:
+            return Response(
+                {'error': 'Endereço não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        serializer = EnderecoSerializer(endereco, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, pk):
+        try:
+            endereco = Endereco.objects.get(pk=pk)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Endereço não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        endereco.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-def user_detail(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if request.method == 'GET':
-        data = {
-            'username': user.username,
-            'email': user.email,
-        }
-        return JsonResponse(data, )
-    elif request.method == 'POST':
-        data = json.loads(request.body)
-        user.username = data.get('username', user.username)
-        user.email = data.get('email', user.email)
-        user.save()
-        return JsonResponse({'status': 'success'}, status=201)
-
-def address_detail(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if request.method == 'GET':
-        addresses = Address.objects.filter(user=user)
-        data = [{
-            'street': addr.street,
-            'city': addr.city,
-            'state': addr.state,
-            'zip_code': addr.zip_code,
-            'country': addr.country,
-        } for addr in addresses]
-        return JsonResponse(data, safe=False)
-    elif request.method == 'POST':
-        data = json.loads(request.body)
-        address = Address.objects.create(
-            user=user,
-            street=data['street'],
-            city=data['city'],
-            state=data['state'],
-            zip_code=data['zip_code'],
-            country=data['country'],
-        )
-        return JsonResponse({'status': 'success', 'address_id': address.id}, status=201)
-
-def credit_card_detail(request, user_id):
-    user = get_object_or_404(User, id=user_id)
-    if request.method == 'GET':
-        cards = CreditCard.objects.filter(user=user)
-        data = [{
-            'card_number': card.card_number,
-            'expiration_date': card.expiration_date,
-            'cvv': card.cvv,
-        } for card in cards]
-        return JsonResponse(data, safe=False)
-    elif request.method == 'POST':
-        data = json.loads(request.body)
-        card = CreditCard.objects.create(
-            user=user,
-            card_number=data['card_number'],
-            expiration_date=data['expiration_date'],
-            cvv=data['cvv'],
-        )
-        return JsonResponse({'status': 'success', 'card_id': card.id}, status=201)
