@@ -5,7 +5,7 @@ from django.db import models
 class Usuario (models.Model):
     nome = models.CharField(max_length=100, null=False, blank=False)
     email = models.CharField(max_length=150, null=False, blank=False, unique=True)
-    dt_nascimento = models.DateTimeField(null=False, blank=False)
+    dt_nascimento = models.DateField(null=False, blank=False)
     cpf = models.CharField(max_length=11, null=False, blank=False, unique=True)
     telefone = models.CharField(max_length=20, null=False, blank=False)
     
