@@ -1,10 +1,17 @@
 from rest_framework import serializers
 from api.models import CartaoCredito,Usuario,Endereco,TipoEndereco
 
+class TipoEnderecoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TipoEndereco
+        fields = ['tipo']
+
 class EnderecoSerializer (serializers.ModelSerializer):
+    tipo_endereco = TipoEnderecoSerializer(many=False, read_only=True)
+    
     class Meta:
         model = Endereco
-        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep']
+        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco']
 
 class CartaoSerializer(serializers.ModelSerializer):
     class Meta:

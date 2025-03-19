@@ -1,22 +1,19 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views import View
-from api.serializers import UsuarioSerializer, EnderecoSerializer, CartaoSerializer
+from api.serializers import UsuarioSerializer, EnderecoSerializer, CartaoSerializer, TipoEnderecoSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 
 from rest_framework.response import Response
 # Criar requisições
-from .models import Usuario, Endereco, CartaoCredito
+from .models import Usuario, Endereco, CartaoCredito, TipoEndereco
 from rest_framework import status
 from django.db import transaction
 from django.core.exceptions import ValidationError
 # Criar requisições
 
-
-
 class UsuarioView(APIView):
-
     @swagger_auto_schema(
         operation_description="Cria um novo usuário.",
         request_body=UsuarioSerializer,
@@ -162,9 +159,7 @@ class UsuarioView(APIView):
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-
 class EnderecoView(APIView):
-
     @swagger_auto_schema(
         request_body=EnderecoSerializer,
         responses={201: EnderecoSerializer, 400: "Erro de validação"},
@@ -238,3 +233,79 @@ class EnderecoView(APIView):
 
         endereco.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class TipoEndereco(APIView):
+    @swagger_auto_schema(
+        operation_description="Obtém um tipo de endereço pelo ID ou lista todos os tipos de endereço.",
+        pk_parameters=[
+            openapi.Parameter(
+                "pk",
+                openapi.IN_PATH,
+                description="ID do tipo de endereço",
+                type=openapi.TYPE_INTEGER,
+                required=True,
+            )
+        ],
+        responses={200: EnderecoSerializer(many=True), 404: "Tipo de endereço não encontrado"},
+    )
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                endereco = TipoEndereco.objects.get(pk=pk)
+                serializer = TipoEnderecoSerializer(endereco)
+                return Response(serializer.data)
+            except TipoEndereco.DoesNotExist:
+                return Response(
+                    {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
+                )
+
+        tipos_enderecos = Endereco.objects.all()
+        serializer = TipoEnderecoSerializer(tipos_enderecos, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        request_body=TipoEnderecoSerializer,
+        responses={201: TipoEnderecoSerializer, 400: "Erro de validação"},
+        operation_description="Cria um novo tipo de endereço.",
+    )
+    def post(self, request):
+        serializer = TipoEnderecoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @swagger_auto_schema(
+        request_body=TipoEnderecoSerializer,
+        responses={200: TipoEnderecoSerializer, 400: "Erro de validação", 404: "Tipo de endereço não encontrado"},
+        operation_description="Atualiza parcialmente um tipo de endereço pelo ID.",
+    )
+    def patch(self, request, pk):
+        try:
+            tipo_endereco = TipoEndereco.objects.get(pk=pk)
+        except TipoEndereco.DoesNotExist:
+            return Response(
+                {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = TipoEnderecoSerializer(tipo_endereco, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        responses={204: "Tipo de endereço deletado", 404: "Tipo de endereço não encontrado"},
+        operation_description="Deleta um tipo de endereço pelo ID.",
+    )
+    def delete(self, request, pk):
+        try:
+            tipo_endereco = TipoEndereco.objects.get(pk=pk)
+        except TipoEndereco.DoesNotExist:
+            return Response(
+                {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        tipo_endereco.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+        
