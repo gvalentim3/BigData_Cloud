@@ -238,3 +238,79 @@ class EnderecoView(APIView):
 
         endereco.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class CartaoView(APIView):
+
+    @swagger_auto_schema(
+        request_body=CartaoSerializer,
+        responses={201: CartaoSerializer, 400: "Erro de validação"},
+        operation_description="Cria um novo Cartão.",
+    )
+    def post(self, request):
+        serializer = CartaoSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        operation_description="Obtém um Cartão pelo ID ou lista todos os cartões.",
+        pk_parameters=[
+            openapi.Parameter(
+                "pk",
+                openapi.IN_PATH,
+                description="ID do Cartão",
+                type=openapi.TYPE_INTEGER,
+                required=True,
+            )
+        ],
+        responses={200: CartaoSerializer(many=True), 404: "Cartão não encontrado"},
+    )
+    def get(self, request, pk=None):
+        if pk:
+            try:
+                cartao = CartaoCredito.objects.get(pk=pk)
+                serializer = CartaoSerializer(cartao)
+                return Response(serializer.data)
+            except CartaoCredito.DoesNotExist:
+                return Response(
+                    {"error": "Cartão não encontrado."}, status=status.HTTP_404_NOT_FOUND
+                )
+
+        cartoes = CartaoCredito.objects.all()
+        serializer = CartaoSerializer(cartoes, many=True)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(
+        request_body=CartaoSerializer,
+        responses={200: CartaoSerializer, 400: "Erro de validação", 404: "Cartão não encontrado"},
+        operation_description="Atualiza parcialmente um cartão pelo ID.",
+    )
+    def patch(self, request, pk):
+        try:
+            cartao = CartaoCredito.objects.get(pk=pk)
+        except CartaoCredito.DoesNotExist:
+            return Response(
+                {"error": "Cartão não encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = CartaoSerializer(cartao, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        responses={204: "Cartão deletado", 404: "Cartão não encontrado"},
+        operation_description="Deleta um cartão pelo ID.",
+    )
+    def delete(self, request, pk):
+        try:
+            cartao = CartaoCredito.objects.get(pk=pk)
+        except CartaoCredito.DoesNotExist:
+            return Response(
+                {"error": "Cartão não encontrado."}, status=status.HTTP_404_NOT_FOUND
+            )
+
+        cartao.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
