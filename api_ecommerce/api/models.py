@@ -28,8 +28,8 @@ class Endereco (models.Model):
     cidade = models.CharField(max_length=100, null=False, blank=False)
     estado = models.CharField(max_length=100, null=False, blank=False)
     cep = models.CharField(max_length=8, null=False, blank=False)
-    id_usuario_endereco = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
-    id_tp_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos")
+    FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
+    FK_tp_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos")
 
     class Meta:
         db_table = 'endereco'
@@ -39,7 +39,7 @@ class CartaoCredito (models.Model):
     dt_expiracao = models.DateTimeField(null=False, blank=False)
     cvv = models.CharField(max_length=3, null=False, blank=False)
     saldo = models.DecimalField(max_digits=15, decimal_places=2, null=False, blank=False)
-    id_usuario_cartao = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")
+    FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")
 
     class Meta:
         db_table = 'cartao_credito'
