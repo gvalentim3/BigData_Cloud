@@ -36,7 +36,7 @@ class Endereco (models.Model):
 
 class CartaoCredito (models.Model):
     numero = models.CharField(max_length=45, null=False, blank=False)
-    dt_expiracao = models.DateTimeField(null=False, blank=False)
+    dt_expiracao = models.DateField(null=False, blank=False)
     cvv = models.CharField(max_length=3, null=False, blank=False)
     saldo = models.DecimalField(max_digits=15, decimal_places=2, null=False, blank=False)
     FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")

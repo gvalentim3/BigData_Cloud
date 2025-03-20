@@ -77,9 +77,9 @@ class UsuarioView(APIView):
 
     @swagger_auto_schema(
         operation_description="Retorna um usuário específico pelo ID ou lista todos os usuários se nenhum ID for fornecido.",
-        pk_parameters=[
+        id_usuario_parameters=[
             openapi.Parameter(
-                'pk',
+                'id_usuario',
                 openapi.IN_PATH,
                 type=openapi.TYPE_INTEGER,
                 description="ID do usuário",
@@ -104,7 +104,7 @@ class UsuarioView(APIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
         
-        list_usuarios = Endereco.objects.all()
+        list_usuarios = Usuario.objects.all()
         serializer = EnderecoSerializer(list_usuarios, many=True)
         return Response(serializer.data)
 
@@ -187,9 +187,9 @@ class EnderecoView(APIView):
 
     @swagger_auto_schema(
         operation_description="Obtém um endereço pelo ID ou lista todos os endereços.",
-        pk_parameters=[
+        id_usuario_parameters=[
             openapi.Parameter(
-                "pk",
+                "id_usuario",
                 openapi.IN_PATH,
                 description="ID do endereço",
                 type=openapi.TYPE_INTEGER,
@@ -294,9 +294,9 @@ class CartaoView(APIView):
 
     @swagger_auto_schema(
         operation_description="Obtém um Cartão pelo ID ou lista todos os cartões.",
-        pk_parameters=[
+        id_usuario_parameters=[
             openapi.Parameter(
-                "pk",
+                "id_usuario",
                 openapi.IN_PATH,
                 description="ID do Cartão",
                 type=openapi.TYPE_INTEGER,
@@ -378,9 +378,9 @@ class CartaoView(APIView):
 class TipoEndereco(APIView):
     @swagger_auto_schema(
         operation_description="Obtém um tipo de endereço pelo ID ou lista todos os tipos de endereço.",
-        pk_parameters=[
+        id_usuario_parameters=[
             openapi.Parameter(
-                "pk",
+                "id_usuario",
                 openapi.IN_PATH,
                 description="ID do tipo de endereço",
                 type=openapi.TYPE_INTEGER,

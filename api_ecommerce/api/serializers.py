@@ -19,8 +19,8 @@ class CartaoSerializer(serializers.ModelSerializer):
         fields = ['numero', 'dt_expiracao', 'cvv', 'saldo']
 
 class UsuarioSerializer (serializers.ModelSerializer):
-    cartoes = CartaoSerializer(many=True, read_only=True)
-    enderecos = EnderecoSerializer(many=True, read_only=True)
+    cartoes = CartaoSerializer(many=True)
+    enderecos = EnderecoSerializer(many=True)
     
     class Meta:
         model = Usuario
