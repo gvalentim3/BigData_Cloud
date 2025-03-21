@@ -1,33 +1,38 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views import View
-from api.serializers import UsuarioSerializer, EnderecoSerializer, CartaoSerializer, TipoEnderecoSerializer
+from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, EnderecoSerializer, CartaoSerializer, TipoEnderecoSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-
 from rest_framework.response import Response
-# Criar requisições
 from .models import Usuario, Endereco, CartaoCredito, TipoEndereco
 from rest_framework import status
-from django.db import transaction
 from django.core.exceptions import ValidationError
-# Criar requisições
+import requests
 
-class UsuarioView(APIView):
+
+class UsuarioCreateListView(APIView):
     @swagger_auto_schema(
         operation_description="Criação um novo usuário. Necessário enviar também pelo menos um cadastro de cartão e um de endereço",
-        request_body=UsuarioSerializer,
+        request_body=UsuarioWriteSerializer,
         responses={
-            201: UsuarioSerializer,
+            201: UsuarioWriteSerializer,
             400: "Erro de validação: Email ou CPF já cadastrados."
         }
     )
     def post(self, request):
-        user_serializer = UsuarioSerializer(data=request.data)
+        raw_data = request.data.copy()
+        print(raw_data)
+        cartao_raw_data = None
+        if 'cartao' in raw_data and raw_data['cartao']:            
+            cartao_raw_data = raw_data.pop('cartao')
+    
+        
+        user_serializer = UsuarioWriteSerializer(data=raw_data)
+        print(user_serializer)
         if user_serializer.is_valid():
             email = user_serializer.validated_data.get('email')
             cpf = user_serializer.validated_data.get('cpf')
-
             if Usuario.objects.filter(email=email).exists():
                 return Response(
                     {'error': 'Este email já foi cadastrado anteriormente.'},
@@ -40,41 +45,37 @@ class UsuarioView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            validated_data = user_serializer.validated_data.copy()
-            data_cartoes = validated_data.pop('cartoes')
-            data_enderecos = validated_data.pop('enderecos')            
+            print("passou pelas verificações")
+            usuario = user_serializer.save()
+            print("salvou")
+            usuario_id = usuario.id
+            print(usuario_id)
 
-            try:
-                with transaction.atomic():
-                    usuario = Usuario.objects.create(**validated_data)
-                    
-                    if data_enderecos:
-                        data_enderecos['FK_usuario'] = usuario.id
-                        endereco_serializer = EnderecoSerializer(data=data_enderecos)
-                        if endereco_serializer.is_valid():
-                            endereco_serializer.save()
-                        else:
-                            raise ValidationError(endereco_serializer.errors)
 
-                    if data_cartoes:
-                        data_cartoes['FK_usuario'] = usuario.id
-                        cartao_serializer = CartaoSerializer(data=data_cartoes)
-                        if cartao_serializer.is_valid():
-                            cartao_serializer.save()
-                        else:
-                            raise ValidationError(cartao_serializer.errors)
-                    
-                    return Response(UsuarioSerializer(usuario).data, status=status.HTTP_201_CREATED)
-            except ValidationError as e:
-            # Handle validation errors
-                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-            except Exception as e:
-            # Handle other exceptions
-                return Response({'error': 'Ocorreu um erro ao processar a solicitação.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            if cartao_raw_data: 
+                cartao_raw_data["FK_usuario"] = usuario_id
+
+                response = requests.post(
+                    f'http://localhost:8000/api/usuarios/{usuario_id}/cartoes/',
+                    json=cartao_raw_data
+                )
+            return Response(user_serializer.errors, status=status.HTTP_200_OK)
         
         return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @swagger_auto_schema(
+        operation_description="Lista de todos os usuários cadastrados.",
+        responses={
+            200: UsuarioReadSerializer(many=True),
+        }
+    )
+    def get(self, request):
+        lista_usuarios = Usuario.objects.all()
+        serializer = UsuarioReadSerializer(lista_usuarios, many=True)
+        return Response(serializer.data)
 
+
+class UsuarioReadUpdateDeleteView(APIView):
     @swagger_auto_schema(
         operation_description="Retorna um usuário específico pelo ID ou lista todos os usuários se nenhum ID for fornecido.",
         id_usuario_parameters=[
@@ -87,33 +88,36 @@ class UsuarioView(APIView):
             )
         ],
         responses={
-            200: UsuarioSerializer(many=True),
+            200: UsuarioReadSerializer,
             404: "Usuário não encontrado."
         }
     )
-    def get(self, request, id_usuario=None):
-        if id_usuario:
-            try:
-                # Se na requisição é enviado um ID de endereço, programa verifica se existe na base de dados e caso exista, retorna os dados.
-                usuario = Usuario.objects.get(id=id_usuario)
-                serializer = UsuarioSerializer(usuario)
-                return Response(serializer.data)
-            except Endereco.DoesNotExist:
-                return Response(
-                    {'error': 'Endereço não encontrado.'},
-                    status=status.HTTP_404_NOT_FOUND
-                )
-        
-        list_usuarios = Usuario.objects.all()
-        serializer = EnderecoSerializer(list_usuarios, many=True)
-        return Response(serializer.data)
+    def get(self, request, id_usuario):
+        try:
+            usuario = Usuario.objects.get(id=id_usuario)
+            serializer = UsuarioReadSerializer(usuario)
+            return Response(serializer.data)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuário não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
 
     @swagger_auto_schema(
         operation_description="Atualiza um usuário pelo ID (parcialmente).",
-        request_body=UsuarioSerializer,
+        id_usuario_parameters=[
+            openapi.Parameter(
+                'id_usuario',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID do usuário",
+                required=True
+            )
+        ],
+        request_body=UsuarioWriteSerializer,
         responses={
-            200: UsuarioSerializer,
+            200: UsuarioWriteSerializer,
             400: "Erro de validação: Email já cadastrado.",
             404: "Usuário não encontrado."
         }
@@ -127,12 +131,19 @@ class UsuarioView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        serializer = UsuarioSerializer(usuario, data=request.data, partial=True)
+        serializer = UsuarioReadSerializer(usuario, data=request.data, partial=True)
         if serializer.is_valid():
             email = serializer.validated_data.get('email')
+            cpf = serializer.validated_data.get('cpf')
             if Usuario.objects.filter(email=email).exclude(id=id_usuario).exists():
                 return Response(
                     {'error': 'Este email já foi cadastrado anteriormente.'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            if usuario.cpf != cpf:
+                return Response(
+                    {'error': 'Não é possível alterar o CPF do cadastro.'},
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
