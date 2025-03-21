@@ -13,19 +13,25 @@ class EnderecoSerializer (serializers.ModelSerializer):
         model = Endereco
         fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco']
 
-class CartaoSerializer(serializers.ModelSerializer):
+
+class CartaoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartaoCredito
-        fields = ['numero', 'dt_expiracao', 'cvv', 'saldo']
+        fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo', "FK_usuario"]
+
+class CartaoReadSerializer(serializers.ModelSerializer):
+        class Meta:
+            model = CartaoCredito
+            fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo']
 
 
 class UsuarioReadSerializer (serializers.ModelSerializer):
-    cartoes = CartaoSerializer(many=True, read_only=True)
+    cartoes = CartaoReadSerializer(many=True, read_only=True)
     enderecos = EnderecoSerializer(many=True, read_only=True)
     
     class Meta:
         model = Usuario
-        fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
+        fields = ['id', 'nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
 
 class UsuarioWriteSerializer (serializers.ModelSerializer):    
     class Meta:

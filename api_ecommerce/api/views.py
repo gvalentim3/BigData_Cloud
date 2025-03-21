@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views import View
-from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, EnderecoSerializer, CartaoSerializer, TipoEnderecoSerializer
+from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, CartaoWriteSerializer, EnderecoSerializer, TipoEnderecoSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
@@ -22,14 +22,12 @@ class UsuarioCreateListView(APIView):
     )
     def post(self, request):
         raw_data = request.data.copy()
-        print(raw_data)
         cartao_raw_data = None
         if 'cartao' in raw_data and raw_data['cartao']:            
             cartao_raw_data = raw_data.pop('cartao')
     
         
         user_serializer = UsuarioWriteSerializer(data=raw_data)
-        print(user_serializer)
         if user_serializer.is_valid():
             email = user_serializer.validated_data.get('email')
             cpf = user_serializer.validated_data.get('cpf')
@@ -45,15 +43,13 @@ class UsuarioCreateListView(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
             
-            print("passou pelas verificações")
             usuario = user_serializer.save()
-            print("salvou")
             usuario_id = usuario.id
             print(usuario_id)
 
-
             if cartao_raw_data: 
                 cartao_raw_data["FK_usuario"] = usuario_id
+                print(cartao_raw_data)
 
                 response = requests.post(
                     f'http://localhost:8000/api/usuarios/{usuario_id}/cartoes/',
@@ -279,15 +275,24 @@ class EnderecoView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class CartaoView(APIView):
+class CartaoCreateListView(APIView):
     @swagger_auto_schema(
-        request_body=CartaoSerializer,
-        responses={201: CartaoSerializer, 400: "Erro de validação"},
+        request_body=CartaoWriteSerializer,
+        id_usuario_parameters=[
+            openapi.Parameter(
+                'id_usuario',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID do usuário",
+                required=True
+            )
+        ],
+        responses={201: CartaoWriteSerializer, 400: "Erro de validação"},
         operation_description="Cria um novo Cartão.",
     )
     def post(self, request, id_usuario):
         try:
-            usuario = Usuario.objects.get(id=id_usuario)
+            usuario = Usuario.objects.get(pk=id_usuario)
         except Usuario.DoesNotExist:
             return Response(
                 {"error": "Usuário não encontrado"},
@@ -296,7 +301,8 @@ class CartaoView(APIView):
 
         data_copy = request.data.copy()
         data_copy['FK_usuario'] = usuario.id
-        serializer = CartaoSerializer(data=data_copy)
+        serializer = CartaoWriteSerializer(data=data_copy)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -304,7 +310,7 @@ class CartaoView(APIView):
 
 
     @swagger_auto_schema(
-        operation_description="Obtém um Cartão pelo ID ou lista todos os cartões.",
+        operation_description="Lista todos os cartões de um usuário (através do ID)",
         id_usuario_parameters=[
             openapi.Parameter(
                 "id_usuario",
@@ -314,9 +320,9 @@ class CartaoView(APIView):
                 required=True,
             )
         ],
-        responses={200: CartaoSerializer(many=True), 404: "Cartão não encontrado"},
+        responses={200: CartaoReadSerializer(many=True), 404: "Usuário não encontrado"},
     )
-    def get(self, request, id_usuario, id_cartao=None):
+    def get(self, request, id_usuario):
             try:
                 usuario = Usuario.objects.get(id=id_usuario)
             except Usuario.DoesNotExist:
@@ -324,26 +330,15 @@ class CartaoView(APIView):
                 {'error': 'Usuario não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-            
-            if id_cartao:
-                try:
-                    cartao = CartaoCredito.objects.get(id=id_cartao, FK_usuario=usuario.id)
-                    serializer = EnderecoSerializer(cartao)
-                    return Response(serializer.data)
-                except Endereco.DoesNotExist:
-                    return Response(
-                        {"error": "Cartão não encontrado para este usuário."}, 
-                        status=status.HTTP_404_NOT_FOUND
-                    )
 
             cartoes = CartaoCredito.objects.filter(FK_usuario=usuario.id)
-            serializer = EnderecoSerializer(cartoes, many=True)
+            serializer = CartaoReadSerializer(cartoes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+class CartaoUpdateDeleteView(APIView):
     @swagger_auto_schema(
-        request_body=CartaoSerializer,
-        responses={200: CartaoSerializer, 400: "Erro de validação", 404: "Cartão não encontrado"},
+        request_body=CartaoWriteSerializer,
+        responses={200: CartaoWriteSerializer, 400: "Erro de validação", 404: "Cartão não encontrado"},
         operation_description="Atualiza parcialmente um cartão pelo ID.",
     )
     def patch(self, request, id_usuario, id_cartao):
