@@ -6,18 +6,24 @@ class TipoEnderecoSerializer(serializers.ModelSerializer):
         model = TipoEndereco
         fields = ['tipo']
 
-class EnderecoSerializer (serializers.ModelSerializer):
-    tipo_endereco = TipoEnderecoSerializer(many=False)
-    
+
+class EnderecoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Endereco
-        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco']
+        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'FK_tp_endereco', 'FK_usuario']
+
+class EnderecoReadSerializer(serializers.ModelSerializer):
+    tipo_endereco = TipoEnderecoSerializer(many=False)
+
+    class Meta:
+        model = CartaoCredito
+        fields = ['id', 'logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco']
 
 
 class CartaoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartaoCredito
-        fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo', "FK_usuario"]
+        fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo', 'FK_usuario']
 
 class CartaoReadSerializer(serializers.ModelSerializer):
         class Meta:
@@ -27,7 +33,7 @@ class CartaoReadSerializer(serializers.ModelSerializer):
 
 class UsuarioReadSerializer (serializers.ModelSerializer):
     cartoes = CartaoReadSerializer(many=True, read_only=True)
-    enderecos = EnderecoSerializer(many=True, read_only=True)
+    enderecos = EnderecoReadSerializer(many=True, read_only=True)
     
     class Meta:
         model = Usuario
@@ -37,12 +43,3 @@ class UsuarioWriteSerializer (serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone']
-
-
-"""        
-class ProdutoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CartaoCredito
-        fields = ['numero', 'dt_expiracao', 'cvv', 'saldo']
-
-"""

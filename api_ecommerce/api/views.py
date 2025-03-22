@@ -1,13 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from django.views import View
-from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, CartaoWriteSerializer, EnderecoSerializer, TipoEnderecoSerializer
+from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, TipoEnderecoSerializer
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from rest_framework.response import Response
-from .models import Usuario, Endereco, CartaoCredito, TipoEndereco
+from .models import Usuario, Endereco, CartaoCredito
 from rest_framework import status
-from django.core.exceptions import ValidationError
 import requests
 
 
@@ -45,11 +43,9 @@ class UsuarioCreateListView(APIView):
             
             usuario = user_serializer.save()
             usuario_id = usuario.id
-            print(usuario_id)
 
             if cartao_raw_data: 
                 cartao_raw_data["FK_usuario"] = usuario_id
-                print(cartao_raw_data)
 
                 response = requests.post(
                     f'http://localhost:8000/api/usuarios/{usuario_id}/cartoes/',
@@ -69,8 +65,6 @@ class UsuarioCreateListView(APIView):
         lista_usuarios = Usuario.objects.all()
         serializer = UsuarioReadSerializer(lista_usuarios, many=True)
         return Response(serializer.data)
-
-
 class UsuarioReadUpdateDeleteView(APIView):
     @swagger_auto_schema(
         operation_description="Retorna um usuário específico pelo ID ou lista todos os usuários se nenhum ID for fornecido.",
@@ -168,44 +162,65 @@ class UsuarioReadUpdateDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class EnderecoView(APIView):
+class EnderecoCreateListView(APIView):
     @swagger_auto_schema(
-        request_body=EnderecoSerializer,
-        responses={201: EnderecoSerializer, 400: "Erro de validação"},
-        operation_description="Cria um novo endereço. Necessita que seja passado id do usuário ao qual será vinculado o endereço",
+        request_body=EnderecoWriteSerializer,
+        id_usuario_parameters=[
+            openapi.Parameter(
+                'id_usuario',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID do usuário",
+                required=True
+            )
+        ],
+        responses={201: CartaoWriteSerializer, 400: "Erro de validação"},
+        operation_description="Cria um novo Endereço vinculado a um usuário.",
     )
     def post(self, request, id_usuario):
         try:
-            usuario = Usuario.objects.get(id=id_usuario)
+            usuario = Usuario.objects.get(pk=id_usuario)
         except Usuario.DoesNotExist:
             return Response(
                 {"error": "Usuário não encontrado"},
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        data_copy = request.data.copy()
-        data_copy['FK_usuario'] = usuario.id
-        serializer = EnderecoSerializer(data=data_copy)
+        endereco_raw_data = request.data.copy()
+
+        tipo_endereco_id = None
+        if 'tipo_endereco' in endereco_raw_data and endereco_raw_data['tipo_endereco']:            
+            tipo_endereco_raw_data = endereco_raw_data.pop('tipo_endereco')
+            tipo_endereco_serializer = TipoEnderecoSerializer(tipo_endereco_raw_data)
+            
+            if tipo_endereco_serializer.is_valid():
+                tipo_endereco = tipo_endereco_serializer.save()
+                tipo_endereco_id = tipo_endereco.id
+
+
+        endereco_raw_data['FK_tp_endereco'] = tipo_endereco_id
+        endereco_raw_data['FK_usuario'] = usuario.id
+        serializer = EnderecoWriteSerializer(data=endereco_raw_data)
+
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
+    
     @swagger_auto_schema(
-        operation_description="Obtém um endereço pelo ID ou lista todos os endereços.",
+        operation_description="Lista todos os endereços de um usuário (através do ID)",
         id_usuario_parameters=[
             openapi.Parameter(
                 "id_usuario",
                 openapi.IN_PATH,
-                description="ID do endereço",
+                description="ID do Cartão",
                 type=openapi.TYPE_INTEGER,
                 required=True,
             )
         ],
-        responses={200: EnderecoSerializer(many=True), 404: "Endereço não encontrado"},
+        responses={200: EnderecoReadSerializer(many=True), 404: "Usuário não encontrado"},
     )
-    def get(self, request, id_usuario, id_endereco=None):
+    def get(self, request, id_usuario):
             try:
                 usuario = Usuario.objects.get(id=id_usuario)
             except Usuario.DoesNotExist:
@@ -213,26 +228,14 @@ class EnderecoView(APIView):
                 {'error': 'Usuario não encontrado.'},
                 status=status.HTTP_404_NOT_FOUND
             )
-            
-            if id_endereco:
-                try:
-                    endereco = Endereco.objects.get(id=id_endereco, FK_usuario=usuario.id)
-                    serializer = EnderecoSerializer(endereco)
-                    return Response(serializer.data)
-                except Endereco.DoesNotExist:
-                    return Response(
-                        {"error": "Endereço não encontrado para este usuário."}, 
-                        status=status.HTTP_404_NOT_FOUND
-                    )
 
             enderecos = Endereco.objects.filter(FK_usuario=usuario.id)
-            serializer = EnderecoSerializer(enderecos, many=True)
+            serializer = EnderecoReadSerializer(enderecos, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-
-
+class EnderecoUpdateDeleteView(APIView):
     @swagger_auto_schema(
-        request_body=EnderecoSerializer,
-        responses={200: EnderecoSerializer, 400: "Erro de validação", 404: "Endereço não encontrado"},
+        request_body=EnderecoWriteSerializer,
+        responses={200: EnderecoWriteSerializer, 400: "Erro de validação", 404: "Endereço não encontrado"},
         operation_description="Atualiza parcialmente um endereço pelo ID.",
     )
     def patch(self, request, id_usuario, id_endereco):
@@ -251,14 +254,13 @@ class EnderecoView(APIView):
                     {"error": "Endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            serializer = EnderecoSerializer(endereco, data=request.data, partial=True)
+            serializer = EnderecoWriteSerializer(endereco, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
             
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
-
     @swagger_auto_schema(
         responses={204: "Endereço deletado", 404: "Endereço não encontrado"},
         operation_description="Deleta um endereço pelo ID.",
@@ -332,16 +334,15 @@ class CartaoCreateListView(APIView):
             )
 
             cartoes = CartaoCredito.objects.filter(FK_usuario=usuario.id)
-            serializer = CartaoReadSerializer(cartoes, many=True)
+            serializer = CartaoWriteSerializer(cartoes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-
 class CartaoUpdateDeleteView(APIView):
     @swagger_auto_schema(
         request_body=CartaoWriteSerializer,
         responses={200: CartaoWriteSerializer, 400: "Erro de validação", 404: "Cartão não encontrado"},
         operation_description="Atualiza parcialmente um cartão pelo ID.",
     )
-    def patch(self, request, id_usuario, id_cartao):
+    def put(self, request, id_usuario, id_cartao):
             try:
                 usuario = Usuario.objects.get(id=id_usuario)
             except Usuario.DoesNotExist:
@@ -352,12 +353,12 @@ class CartaoUpdateDeleteView(APIView):
         
             try:
                 cartao = CartaoCredito.objects.get(id=id_cartao, FK_usuario=usuario.id)
-            except Endereco.DoesNotExist:
+            except CartaoCredito.DoesNotExist:
                 return Response(
                     {"error": "Cartão não encontrado neste usuário."}, status=status.HTTP_404_NOT_FOUND
                 )
 
-            serializer = EnderecoSerializer(cartao, data=request.data, partial=True)
+            serializer = CartaoWriteSerializer(cartao, data=request.data, partial=False)
             if serializer.is_valid():
                 serializer.save()
                 return Response(serializer.data, status=status.HTTP_200_OK)
@@ -371,91 +372,19 @@ class CartaoUpdateDeleteView(APIView):
     )
     def delete(self, request, id_usuario, id_cartao):
         try:
+            usuario = Usuario.objects.get(id=id_usuario)
+        except Usuario.DoesNotExist:
+            return Response(
+                {'error': 'Usuario não encontrado.'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        try:
             cartao = CartaoCredito.objects.get(id=id_cartao, FK_usuario=id_usuario)
-        except Endereco.DoesNotExist:
+        except CartaoCredito.DoesNotExist:
             return Response(
                 {"error": "Cartão não encontrado para este usuário."}, status=status.HTTP_404_NOT_FOUND
             )
 
         cartao.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
-
-class TipoEndereco(APIView):
-    @swagger_auto_schema(
-        operation_description="Obtém um tipo de endereço pelo ID ou lista todos os tipos de endereço.",
-        id_usuario_parameters=[
-            openapi.Parameter(
-                "id_usuario",
-                openapi.IN_PATH,
-                description="ID do tipo de endereço",
-                type=openapi.TYPE_INTEGER,
-                required=True,
-            )
-        ],
-        responses={200: EnderecoSerializer(many=True), 404: "Tipo de endereço não encontrado"},
-    )
-    def get(self, request, id_tp_endereco=None):
-        if id_tp_endereco:
-            try:
-                tp_endereco = TipoEndereco.objects.get(id=id_tp_endereco)
-                serializer = TipoEnderecoSerializer(tp_endereco)
-                return Response(serializer.data)
-            except TipoEndereco.DoesNotExist:
-                return Response(
-                    {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
-                )
-
-        tipos_enderecos = Endereco.objects.all()
-        serializer = TipoEnderecoSerializer(tipos_enderecos, many=True)
-        return Response(serializer.data)
-
-
-    @swagger_auto_schema(
-        request_body=TipoEnderecoSerializer,
-        responses={201: TipoEnderecoSerializer, 400: "Erro de validação"},
-        operation_description="Cria um novo tipo de endereço.",
-    )
-    def post(self, request):
-        serializer = TipoEnderecoSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    
-
-    @swagger_auto_schema(
-        request_body=TipoEnderecoSerializer,
-        responses={200: TipoEnderecoSerializer, 400: "Erro de validação", 404: "Tipo de endereço não encontrado"},
-        operation_description="Atualiza parcialmente um tipo de endereço pelo ID.",
-    )
-    def patch(self, request, id_tp_endereco):
-        try:
-            tipo_endereco = TipoEndereco.objects.get(id=id_tp_endereco)
-        except TipoEndereco.DoesNotExist:
-            return Response(
-                {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        serializer = TipoEnderecoSerializer(tipo_endereco, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-
-    @swagger_auto_schema(
-        responses={204: "Tipo de endereço deletado", 404: "Tipo de endereço não encontrado"},
-        operation_description="Deleta um tipo de endereço pelo ID.",
-    )
-    def delete(self, request, id_tp_endereco):
-        try:
-            tipo_endereco = TipoEndereco.objects.get(id=id_tp_endereco)
-        except TipoEndereco.DoesNotExist:
-            return Response(
-                {"error": "Tipo de endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
-            )
-
-        tipo_endereco.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-        
