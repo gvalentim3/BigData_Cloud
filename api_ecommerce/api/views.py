@@ -1,12 +1,16 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.serializers import UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, TipoEnderecoSerializer
+from api.serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
+                             CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
+                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer)
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from rest_framework.response import Response
 from .models import Usuario, Endereco, CartaoCredito
 from rest_framework import status
 import requests
+from django.utils import timezone
+import uuid
+
 
 
 class UsuarioCreateListView(APIView):
@@ -388,3 +392,68 @@ class CartaoUpdateDeleteView(APIView):
 
         cartao.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+    
+class AuthorizeTransacaoView(APIView):
+    def post(self, request, id_usuario):
+        try:
+            usuario = Usuario.objects.get(pk=id_usuario)
+        except Usuario.DoesNotExist:
+            return Response(
+                {"error": "Usuário não encontrado"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        serializer = TransacaoRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        numero_cartao = serializer.validated_data['numero']
+        cvv_cartao = serializer.validated_data['cvv']
+        dt_expiracao_cartao = serializer.validated_data['dt_expiracao']
+        valor_transacao = serializer.validated_data['valor']
+
+        cartao_compra = None
+        for cartao in usuario.cartoes.all():
+            if cartao.numero == numero_cartao and cartao.cvv == cvv_cartao:
+                cartao_compra = cartao
+                break
+        
+        if not cartao_compra:
+            transacao_response = {
+                "status": "NOT_AUTHORIZED",
+                "dt_transacao": timezone.now(),
+                "message": "Cartão não encontrado para o usuário"
+            }
+
+            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
+            return Response(response_serializer, status=status.HTTP_404_NOT_FOUND)
+        
+        if dt_expiracao_cartao < timezone.now():
+            transacao_response = {
+                "status": "NOT_AUTHORIZED",
+                "dt_transacao": timezone.now(),
+                "message": "Cartão expirado"
+            }
+
+            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
+            return Response(response_serializer, status=status.HTTP_400_BAD_REQUEST)
+        
+        if cartao_compra.saldo < valor_transacao:
+            transacao_response = {
+                "status": "NOT_AUTHORIZED",
+                "dt_transacao": timezone.now(),
+                "message": "Cartão sem saldo suficiente para realizar a compra"
+            }
+
+            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
+            return Response(response_serializer, status=status.HTTP_400_BAD_REQUEST)
+        
+        cartao_compra.saldo -= valor_transacao
+        cartao_compra.save()
+        
+        transacao_response = {
+            "status": "AUTHORIZED",
+            "codigo_autorizacao": uuid.uuid4(),
+            "dt_transacao": timezone.now(),
+            "mensagem": "Cartão sem saldo suficiente para realizar a compra"
+        }

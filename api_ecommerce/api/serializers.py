@@ -43,3 +43,16 @@ class UsuarioWriteSerializer (serializers.ModelSerializer):
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone']
+
+
+class TransacaoRequestSerializer (serializers.ModelSerializer):
+    numero = serializers.CharField(max_length=16)
+    dt_expiracao = serializers.DateField()
+    cvv = serializers.CharField(max_length=3)
+    valor = serializers.DecimalField(decimal_places=2)
+
+class TransacaoResponseSerializer (serializers.ModelSerializer):
+    status = serializers.CharField()
+    codigo_autorizacao = serializers.UUIDField()
+    dt_transacao = serializers.DateTimeField()
+    mensagem = serializers.CharField()
