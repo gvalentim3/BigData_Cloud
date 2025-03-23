@@ -86,6 +86,17 @@ DATABASES = {
         'PORT': '3306',
     }
 }
+COSMOS_DB = {
+    "URI": "https://localhost:8081/",  # Replace with your Cosmos DB URI
+    "KEY": "C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+4QDU5DE2nQ9nDuVTqobD4b8mGGyPMbIZnqyMsEcaGQy67XIw/Jw==",  # Replace with your Cosmos DB key
+    "DATABASE_NAME": "ibmec-cloud-mall-products",  # Replace with your database name
+    "COLLECTIONS": {
+        "PRODUTOS": "produtos",  # Collection para produtos
+        "PEDIDOS": "pedidos",  # Collection para pedidos
+    },
+    "QUERY_METRICS_ENABLED": True,  # Optional: Enable query metrics
+    "RESPONSE_DIAGNOSTICS_ENABLED": True,  # Optional: Enable response diagnostics
+}
 
 
 # Password validation
