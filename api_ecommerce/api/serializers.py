@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import CartaoCredito,Usuario,Endereco,TipoEndereco
+from api.models import CartaoCredito,Usuario,Endereco,TipoEndereco,Produto,Pedido
 
 class TipoEnderecoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -56,3 +56,21 @@ class TransacaoResponseSerializer (serializers.ModelSerializer):
     codigo_autorizacao = serializers.UUIDField()
     dt_transacao = serializers.DateTimeField()
     mensagem = serializers.CharField()
+
+class ProdutoSerializer:
+    @staticmethod
+    def serialize(produto):
+        return produto.to_dict()
+
+    @staticmethod
+    def deserialize(data):
+        return Produto.from_dict(data)
+
+class PedidoSerializer:
+    @staticmethod
+    def serialize(pedido):
+        return pedido.to_dict()
+
+    @staticmethod
+    def deserialize(data):
+        return Pedido.from_dict(data)

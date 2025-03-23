@@ -2,7 +2,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from api.serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
-                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer)
+                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer,ProdutoSerializer, PedidoSerializer)
+from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import Usuario, Endereco, CartaoCredito
@@ -10,6 +11,8 @@ from rest_framework import status
 import requests
 from django.utils import timezone
 import uuid
+from django.conf import settings
+
 
 
 
@@ -455,5 +458,59 @@ class AuthorizeTransacaoView(APIView):
             "status": "AUTHORIZED",
             "codigo_autorizacao": uuid.uuid4(),
             "dt_transacao": timezone.now(),
-            "mensagem": "Cartão sem saldo suficiente para realizar a compra"
+            "mensagem": "Compra autorizada com sucesso"
         }
+
+
+
+class ProdutoView(APIView):
+    def post(self, request):
+        data = request.body # JSON
+        produto = ProdutoSerializer.deserialize(data)
+        cosmos_db.insert("produtos", produto.to_dict())
+        return Response(ProdutoSerializer.serialize(produto), status=201)
+
+    def get(self, request, id_produto=None):
+        if id_produto:
+            produto_data = cosmos_db.find_by_id("produtos", id_produto)
+            if not produto_data:
+                return Response({"error": "Produto não encontrado"}, status=404)
+            produto = ProdutoSerializer.deserialize(produto_data)
+            return Response(ProdutoSerializer.serialize(produto), status=200)
+        else:
+            produtos_data = cosmos_db.find_all("produtos")
+            produtos = [ProdutoSerializer.deserialize(p) for p in produtos_data]
+            return Response([ProdutoSerializer.serialize(p) for p in produtos], safe=False, status=200)
+
+    def delete(self, request, id_produto):
+        produto_data = cosmos_db.find_by_id("produtos", id_produto)
+        if not produto_data:
+            return Response({"error": "Produto não encontrado"}, status=404)
+        cosmos_db.delete("produtos", id_produto)
+        return Response({"Produto deletado com sucesso!"}, status=204)
+    
+class PedidoView(APIView):
+    def post(self, request):
+        data = request.body  # JSON
+        pedido = PedidoSerializer.deserialize(data)
+        cosmos_db.insert("pedidos", pedido.to_dict())
+        return Response(PedidoSerializer.serialize(pedido), status=201)
+
+    def get(self, request, id=None):
+        if id:
+            pedido_data = cosmos_db.find_by_id("pedidos", id)
+            if not pedido_data:
+                return Response({"erro": "Pedido não encontrado"}, status=404)
+            pedido = PedidoSerializer.deserialize(pedido_data)
+            return Response(PedidoSerializer.serialize(pedido), status=200)
+        else:
+            pedidos_data = cosmos_db.find_all("pedidos")
+            pedidos = [PedidoSerializer.deserialize(o) for o in pedidos_data]
+            return Response([PedidoSerializer.serialize(o) for o in pedidos], safe=False, status=200)
+
+    def delete(self, request, id):
+        pedido_data = cosmos_db.find_by_id("pedidos", id)
+        if not pedido_data:
+            return Response({"erro": "pedido não encontrado"}, status=404)
+        cosmos_db.delete("pedidos", id)
+        return Response({"Pedido deletado com sucesso!"}, status=204)
