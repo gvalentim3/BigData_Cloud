@@ -8,7 +8,7 @@ class CosmosDB:
         """
         self.client = MongoClient(
             settings.COSMOS_DB["URI"],
-            username="localhost",  # Replace with your Cosmos DB username if needed
+            username=settings.COSMOS_DB["NAME"],  # Replace with your Cosmos DB username if needed
             password=settings.COSMOS_DB["KEY"],
             tls=True,  # Enable TLS for secure connection
             tlsAllowInvalidCertificates=True,  # Allow self-signed certificates (for local development)
