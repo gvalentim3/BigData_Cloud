@@ -2,11 +2,11 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from api.serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
-                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer,ProdutoSerializer, PedidoSerializer)
+                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer) #,ProdutoSerializer, PedidoSerializer)
 from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .models import Usuario, Endereco, CartaoCredito, TipoEndereco, Produto, Pedido
+from .models import Usuario, Endereco, CartaoCredito, TipoEndereco #, Produto, Pedido
 from rest_framework import status
 import requests
 from django.utils import timezone
@@ -462,6 +462,7 @@ class AuthorizeTransacaoView(APIView):
             "mensagem": "Compra autorizada com sucesso"
         }
 
+"""
 class ProdutoView(APIView):
     @swagger_auto_schema(
         request_body=ProdutoSerializer,
@@ -789,3 +790,4 @@ class PedidoView(APIView):
             return Response({"error": "Pedido not found"}, status=404)
         except Exception as e:
             return Response({"error": str(e)}, status=400)
+"""
