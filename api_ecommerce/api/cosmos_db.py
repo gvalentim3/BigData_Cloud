@@ -1,43 +1,38 @@
 from django.conf import settings
-from pymongo import MongoClient
+from azure.cosmos import CosmosClient, exceptions
 
 class CosmosDB:
     def __init__(self):
-        """
-        Initialize the Cosmos DB connection and collections.
-        """
-        self.client = MongoClient(
+        self.client = CosmosClient(
             settings.COSMOS_DB["URI"],
-            username=settings.COSMOS_DB["NAME"],  # Replace with your Cosmos DB username if needed
-            password=settings.COSMOS_DB["KEY"],
-            tls=True,  # Enable TLS for secure connection
-            tlsAllowInvalidCertificates=True,  # Allow self-signed certificates (for local development)
+            credential=settings.COSMOS_DB["KEY"],
+            connection_verify=False  
+            username=settings.COSMOS_DB["NAME"],
+            tls=True,
+            tlsAllowInvalidCertificates=True,
         )
-        self.db = self.client[settings.COSMOS_DB["DATABASE_NAME"]]
-        self.collections = {
-            "produtos": self.db[settings.COSMOS_DB["COLLECTIONS"]["PRODUTOS"]],
-            "pedidos": self.db[settings.COSMOS_DB["COLLECTIONS"]["PEDIDOS"]],
+        self.database = self.client.get_database_client(settings.COSMOS_DB["DATABASE_NAME"])
+        self.containers = {
+            "produtos": self.database.get_container_client(settings.COSMOS_DB["COLLECTIONS"]["PRODUTOS"]),
+            "pedidos": self.database.get_container_client(settings.COSMOS_DB["COLLECTIONS"]["PEDIDOS"]),
         }
-    def insert(self, document):
-        """
-        Insere um documento na coleção do CosmosDB.
-        """
-        return self.collection.insert_one(document)
+        self.collection = self.containers["produtos"]  # Default collection
 
-    def find_by_id(self, id):
-        """
-        Acha um documento pelo ID.
-        """
-        return self.collection.find_one({"id": id})
+    def insert(self, document):
+        """Insert a document into Cosmos DB"""
+        return self.collection.create_item(document)
+
+    def find_by_id(self, id, partition_key):
+        """Find document by ID and partition key"""
+        return self.collection.read_item(id, partition_key=partition_key)
 
     def find_all(self):
-        """
-        Acha todos os documentos do Banco de dados.
-        """
-        return list(self.collection.find({}))
+        """Query all documents"""
+        return list(self.collection.query_items(
+            query="SELECT * FROM c",
+            enable_cross_partition_query=True
+        ))
 
-    def delete(self, id):
-        """
-        Deleta o documento pelo ID.
-        """
-        return self.collection.delete_one({"id": id})
+    def delete(self, id, partition_key):
+        """Delete a document"""
+        return self.collection.delete_item(id, partition_key=partition_key)

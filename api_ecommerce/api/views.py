@@ -6,12 +6,13 @@ from api.serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, Cart
 from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .models import Usuario, Endereco, CartaoCredito
+from .models import Usuario, Endereco, CartaoCredito, TipoEndereco, Produto, Pedido
 from rest_framework import status
 import requests
 from django.utils import timezone
 import uuid
 from django.conf import settings
+from azure.cosmos import exceptions as cosmos_exceptions
 
 
 
@@ -461,15 +462,45 @@ class AuthorizeTransacaoView(APIView):
             "mensagem": "Compra autorizada com sucesso"
         }
 
-
-
 class ProdutoView(APIView):
+    @swagger_auto_schema(
+        request_body=ProdutoSerializer,
+        responses={
+            201: ProdutoSerializer,
+            400: "Bad Request"
+        },
+        operation_description="Create a new product"
+    )
     def post(self, request):
-        data = request.body # JSON
-        produto = ProdutoSerializer.deserialize(data)
-        cosmos_db.insert("produtos", produto.to_dict())
-        return Response(ProdutoSerializer.serialize(produto), status=201)
+        try:
+            produto = Produto.from_dict(request.data)
 
+            created_item = cosmos_db.containers["produtos"].create_item(
+                body=produto.to_dict(),
+                enable_automatic_id_generation=True  # Will be ignored since we provide id
+            )
+            
+            return Response(created_item, status=201)
+        
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            return Response({"error": str(e)}, status=400)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'id_produto',
+                openapi.IN_PATH,
+                description="ID do produto",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: ProdutoSerializer(),
+            404: "Product not found"
+        },
+        operation_description="Pegar todos os produtos ou um specifico pelo ID"
+    )
     def get(self, request, id_produto=None):
         if id_produto:
             produto_data = cosmos_db.find_by_id("produtos", id_produto)
@@ -482,6 +513,93 @@ class ProdutoView(APIView):
             produtos = [ProdutoSerializer.deserialize(p) for p in produtos_data]
             return Response([ProdutoSerializer.serialize(p) for p in produtos], safe=False, status=200)
 
+@swagger_auto_schema(
+    manual_parameters=[
+        openapi.Parameter(
+            'id',
+            openapi.IN_PATH,
+            description="ID of the product to update",
+            type=openapi.TYPE_STRING,
+            required=True
+        ),
+        openapi.Parameter(
+            'produtocategoriaid',
+            openapi.IN_QUERY,
+            description="Product category ID (partition key)",
+            type=openapi.TYPE_STRING,
+            required=True
+        )
+    ],
+    request_body=ProdutoSerializer,
+    responses={
+        200: ProdutoSerializer,
+        400: "Bad Request or Missing partition key",
+        404: "Product not found"
+    },
+    operation_description="Update a product by ID"
+)
+def put(self, request, id):
+    try:
+        container = cosmos_db.containers["produtos"]
+        
+        # 1. Validate partition key
+        partition_key = request.query_params.get('produtocategoriaid')
+        if not partition_key:
+            return Response(
+                {"error": "produtocategoriaid query parameter required as partition key"},
+                status=400
+            )
+        
+        # 2. Get existing item
+        existing_item = container.read_item(
+            item=id,
+            partition_key=partition_key
+        )
+        
+        # 3. Validate and process update data
+        serializer = ProdutoSerializer(data=request.data, partial=True)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=400)
+        
+        # 4. Prepare updated data (preserve existing fields not in update)
+        updated_data = {
+            **existing_item,
+            **serializer.validated_data,
+            "id": id,  # Ensure ID remains the same
+            "produtocategoriaid": partition_key  # Ensure partition key remains the same
+        }
+        
+        # 5. Update item in Cosmos DB
+        updated_item = container.replace_item(
+            item=id,
+            body=updated_data
+        )
+        
+        # 6. Return the updated product
+        produto = Produto.from_dict(updated_item)
+        return Response(ProdutoSerializer(produto).data, status=200)
+        
+    except cosmos_exceptions.CosmosResourceNotFoundError:
+        return Response({"error": "Product not found"}, status=404)
+    except Exception as e:
+        return Response({"error": str(e)}, status=400)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'id_produto',
+                openapi.IN_PATH,
+                description="ID of the product to delete",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            204: "Product deleted successfully",
+            404: "Product not found"
+        },
+        operation_description="Delete a product by ID"
+    )
     def delete(self, request, id_produto):
         produto_data = cosmos_db.find_by_id("produtos", id_produto)
         if not produto_data:
@@ -490,27 +608,184 @@ class ProdutoView(APIView):
         return Response({"Produto deletado com sucesso!"}, status=204)
     
 class PedidoView(APIView):
+    @swagger_auto_schema(
+        request_body=Pedido,
+        responses={
+            201: "DEu certo",
+            400: "Bad Request"
+        },
+        operation_description="Create a new order"
+    )
     def post(self, request):
-        data = request.body  # JSON
-        pedido = PedidoSerializer.deserialize(data)
-        cosmos_db.insert("pedidos", pedido.to_dict())
-        return Response(PedidoSerializer.serialize(pedido), status=201)
+        try:
+            pedido = Pedido.from_dict(request.data)
+            
+            created_item = cosmos_db.containers["pedidos"].create_item(
+                body=pedido.to_dict(),
+                enable_automatic_id_generation=True
+            )
+            
+            return Response(created_item, status=201)
+            
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            return Response({"error": str(e)}, status=400)
 
-    def get(self, request, id=None):
-        if id:
-            pedido_data = cosmos_db.find_by_id("pedidos", id)
-            if not pedido_data:
-                return Response({"erro": "Pedido não encontrado"}, status=404)
-            pedido = PedidoSerializer.deserialize(pedido_data)
-            return Response(PedidoSerializer.serialize(pedido), status=200)
-        else:
-            pedidos_data = cosmos_db.find_all("pedidos")
-            pedidos = [PedidoSerializer.deserialize(o) for o in pedidos_data]
-            return Response([PedidoSerializer.serialize(o) for o in pedidos], safe=False, status=200)
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'id_pedido',
+                openapi.IN_PATH,
+                description="ID of the order to retrieve",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'nome_cliente',
+                openapi.IN_QUERY,
+                description="Client name (required when getting a single order)",
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: "Deu certo",
+            400: "Missing partition key",
+            404: "Order not found"
+        },
+        operation_description="Get all orders or a specific order by ID"
+    )
+    def get(self, request, id_pedido=None):
+        try:
+            container = cosmos_db.containers["pedidos"]
+            
+            if id_pedido:
+                
+                partition_key = request.query_params.get('nome_cliente')
+                if not partition_key:
+                    return Response(
+                        {"error": "nome_cliente query parameter required as partition key"},
+                        status=400
+                    )
+                
+                pedido_data = container.read_item(
+                    item=id_pedido,
+                    partition_key=partition_key
+                )
+                pedido = Pedido.from_dict(pedido_data)
+                pedidodict = Pedido.to_dict(pedido)
+                return Response(pedidodict)
+            else:
+                # List all products (cross-partition query)
+                pedidos = list(container.query_items(
+                    query="SELECT * FROM c",
+                    enable_cross_partition_query=True
+                ))
+                pedidos = [Pedido.from_dict(p) for p in pedidos]
+                pedidosdict = Pedido.to_dict(pedidos)
+                return Response(pedidosdict)
+                
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response({"error": "Product not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
 
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description="ID of the order to update",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'nome_cliente',
+                openapi.IN_QUERY,
+                description="Pedido category ID (partition key)",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        request_body=Pedido,
+        responses={
+            200: "Deu Certo",
+            400: "Bad Request or Missing partition key",
+            404: "Pedido not found"
+        },
+        operation_description="Update a Pedido by ID"
+    )
+    def put(self, request, id):
+        try:
+            container = cosmos_db.containers["pedidos"]
+            
+            partition_key = request.query_params.get('nome_cliente')
+            if not partition_key:
+                return Response(
+                    {"error": "nome_cliente query parameter required as partition key"},
+                    status=400
+                )
+            
+            existing_item = container.read_item(
+                item=id,
+                partition_key=partition_key
+            )
+
+            updated_data = {**existing_item, **request.data}
+            
+            updated_item = container.replace_item(
+                item=id,
+                body=updated_data
+            )
+            
+            return Response(updated_item)
+            
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response({"error": "Product not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
+
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description="ID of the Pedido to delete",
+                type=openapi.TYPE_STRING,
+                required=True
+            ),
+            openapi.Parameter(
+                'nome_cliente',
+                openapi.IN_QUERY,
+                description="Product category ID (partition key)",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            204: "Pedido deleted successfully",
+            400: "Missing partition key",
+            404: "Pedido not found"
+        },
+        operation_description="Delete a pedido by ID"
+    )
     def delete(self, request, id):
-        pedido_data = cosmos_db.find_by_id("pedidos", id)
-        if not pedido_data:
-            return Response({"erro": "pedido não encontrado"}, status=404)
-        cosmos_db.delete("pedidos", id)
-        return Response({"Pedido deletado com sucesso!"}, status=204)
+        try:
+            container = cosmos_db.containers["pedidos"]
+            
+            partition_key = request.query_params.get('nome_cliente')
+            if not partition_key:
+                return Response(
+                    {"error": "nome_cliente query parameter required as partition key"},
+                    status=400
+                )
+            
+            container.delete_item(
+                item=id,
+                partition_key=partition_key
+            )
+            return Response(status=204)
+            
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response({"error": "Pedido not found"}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=400)
