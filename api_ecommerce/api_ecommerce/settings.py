@@ -82,11 +82,12 @@ WSGI_APPLICATION = 'api_ecommerce.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ibmec-cloud-mall',
-        'USER': 'root',
-        'PASSWORD': 'admin',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': os.getenv("SQL_DATABASE"),  # Replace with your database name
+        'USER': os.getenv("SQL_USERNAME"),  # Replace with your database user
+        'PASSWORD': os.getenv("SQL_PASSWORD"),  # Replace with your database password
+        'HOST': os.getenv("SQL_SERVER"),  # Replace with your database host
+        'PORT': os.getenv("SQL_PORT"),  # Replace with your database port
+        'ssl-mode': 'require',
     }
 }
 COSMOS_DB = {
