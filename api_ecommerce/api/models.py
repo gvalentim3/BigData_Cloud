@@ -45,26 +45,6 @@ class CartaoCredito (models.Model):
     class Meta:
         db_table = 'cartao_credito'
 
-
-class Pedido:
-    def __init__(self, produto, quantidade, nome_cliente, id=None):
-        self.id = id
-        self.produto = produto
-        self.quantidade = quantidade
-        self.nome_cliente = nome_cliente
-
-    def to_dict(self):
-        return {
-            "id": self.id,
-            "produto": self.produto,
-            "quantidade": self.quantidade,
-            "nome_cliente": self.nome_cliente,
-        }
-
-    @staticmethod
-    def save(pedido):
-        container = database.create_container_if_not_exists(id="pedido", partition_key="/id")
-        return container.upsert_item(pedido.to_dict())
 """
 class Produto(models.Model):
     nome = models.CharField(max_length=255)
