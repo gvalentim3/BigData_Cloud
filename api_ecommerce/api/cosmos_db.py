@@ -11,6 +11,10 @@ class CosmosDB:
                 url=settings.COSMOS_DB["URI"],
                 credential=settings.COSMOS_DB["KEY"],
                 connection_verify=False,
+                connection_policy={
+                    'enable_endpoint_discovery': False,
+                    'connection_mode': 'Gateway'
+                    }
             )
             self.database = self.client.get_database_client(settings.COSMOS_DB["DATABASE_NAME"])
             self.containers = {
