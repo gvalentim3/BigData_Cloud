@@ -10,14 +10,6 @@ class CosmosDB:
             self.client = CosmosClient(
                 url=settings.COSMOS_DB["URI"],
                 credential=settings.COSMOS_DB["KEY"],
-                retry_total=3,
-                retry_backoff_max=10,
-                consistency_level='Session',
-                connection_policy={
-                    'enable_endpoint_discovery': False,
-                    'connection_mode': 'Gateway',
-                    'request_timeout': 10 
-                }
             )
             self.database = self.client.get_database_client(settings.COSMOS_DB["DATABASE_NAME"])
             self.containers = {

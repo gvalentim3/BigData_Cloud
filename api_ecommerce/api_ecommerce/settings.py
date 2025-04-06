@@ -53,7 +53,6 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'api_ecommerce.middleware.CosmosAuthMiddleware',
 ]
 
 ROOT_URLCONF = 'api_ecommerce.urls'
@@ -109,18 +108,6 @@ COSMOS_DB = {
     "RESPONSE_DIAGNOSTICS_ENABLED": True,  # Optional: Enable response diagnostics
 }
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'Bearer': {
-            'type': 'apiKey',
-            'name': 'Authorization',
-            'in': 'header',
-            'description': 'Type: "Bearer {cosmos-key}"'
-        }
-    },
-    'USE_SESSION_AUTH': False,
-    'DEFAULT_AUTO_SCHEMA_CLASS': 'api_ecommerce.schemas.CustomAutoSchema',
-}
 
 
 # Password validation
