@@ -31,13 +31,11 @@ jobs:
           pip install --upgrade pip
       
       - name: Install dependencies
-        working-directory: ./api_ecommerce
         run: |
           # Install pip requirements
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Install dependencies
-        working-directory: ./api_ecommerce
         run: |
           ../venv/bin/pip install -r requirements.txt
         
