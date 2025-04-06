@@ -1,5 +1,8 @@
 from django.http import JsonResponse
 import os
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 class CosmosAuthMiddleware:
     def __init__(self, get_response):
