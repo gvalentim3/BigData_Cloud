@@ -62,7 +62,7 @@ MIDDLEWARE = [
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-ROOT_URLCONF = 'api_ecommerce.urls'
+ROOT_URLCONF = 'api_ecommerce.api_ecommerce.urls'
 
 TEMPLATES = [
     {

@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from api.serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
+from .serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
                              TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer) #,ProdutoSerializer, PedidoSerializer)
 from .apps import cosmos_db

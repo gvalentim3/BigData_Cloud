@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import CartaoCredito,Usuario,Endereco,TipoEndereco #Produto,Pedido
+from .models import CartaoCredito,Usuario,Endereco,TipoEndereco #Produto,Pedido
 
 class TipoEnderecoSerializer(serializers.ModelSerializer):
     class Meta:

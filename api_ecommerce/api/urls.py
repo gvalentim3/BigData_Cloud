@@ -1,5 +1,5 @@
 from django.urls import path
-from api.views import (UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
+from .views import (UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
                        CartaoUpdateDeleteView, EnderecoCreateListView, EnderecoUpdateDeleteView,
                        AuthorizeTransacaoView, test_view) #, ProdutoView, PedidoView)
 
