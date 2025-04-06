@@ -87,7 +87,14 @@ DATABASES = {
         'PASSWORD': os.getenv("SQL_PASSWORD"),  # Replace with your database password
         'HOST': os.getenv("SQL_SERVER"),  # Replace with your database host
         'PORT': os.getenv("SQL_PORT"),  # Replace with your database port
-        'ssl-mode': 'require',
+        'OPTIONS': {
+            'ssl': {
+                'ca': '\api_ecommerce\DigiCertGlobalRootCA.crt.pem',  # Path to your certificate
+                'ssl_mode': 'REQUIRED'  # Force SSL
+            },
+            'charset': 'utf8mb4',
+        }
+
     }
 }
 COSMOS_DB = {
