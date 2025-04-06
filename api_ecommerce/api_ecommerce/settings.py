@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 from dotenv import load_dotenv, find_dotenv
 import os
 from pathlib import Path
+import pymysql
+pymysql.install_as_MySQLdb()  # Makes PyMySQL mimic mysqlclient
 
 load_dotenv(find_dotenv())
 
@@ -89,7 +91,7 @@ DATABASES = {
         'PORT': os.getenv("SQL_PORT"),  # Replace with your database port
         'OPTIONS': {
             'ssl': {
-                'ca': '\api_ecommerce\DigiCertGlobalRootCA.crt.pem',  # Path to your certificate
+                'ca': r'./DigiCertGlobalRootCA.crt.pem',  # Path to your certificate
                 'ssl_mode': 'REQUIRED'  # Force SSL
             },
             'charset': 'utf8mb4',
