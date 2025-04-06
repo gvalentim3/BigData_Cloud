@@ -14,7 +14,11 @@ import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
 
+# views.py
+from django.http import JsonResponse
 
+def test_view(request):
+    return JsonResponse({"status": "ok"})
 
 
 class UsuarioCreateListView(APIView):
