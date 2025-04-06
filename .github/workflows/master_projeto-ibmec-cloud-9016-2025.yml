@@ -42,6 +42,7 @@ jobs:
           ../venv/bin/pip install -r requirements.txt
 
       - name: Run collestatic
+        working-directory: ./api_ecommerce
         run: python manage.py collestatic
 
       - name: Verify installed packages
