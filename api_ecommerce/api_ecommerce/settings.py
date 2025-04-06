@@ -28,7 +28,7 @@ SECRET_KEY = 'django-insecure-o#pdi%udpf=0g9n2wupct7yw#*!467rxjv(t1wenh3d$@e^%oa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [] 
 
 
 # Application definition
@@ -82,11 +82,18 @@ WSGI_APPLICATION = 'api_ecommerce.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'ibmec-cloud-mall',
-        'USER': 'root',
-        'PASSWORD': 'admin',
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'NAME': os.getenv("SQL_DATABASE"),  # Replace with your database name
+        'USER': os.getenv("SQL_USERNAME"),  # Replace with your database user
+        'PASSWORD': os.getenv("SQL_PASSWORD"),  # Replace with your database password
+        'HOST': os.getenv("SQL_SERVER"),  # Replace with your database host
+        'PORT': os.getenv("SQL_PORT"),  # Replace with your database port
+        'OPTIONS': {
+            'ssl': {
+                'ca': os.path.join(BASE_DIR, 'DigiCertGlobalRootCA.crt.pem'),
+                'ssl_mode': 'REQUIRED'
+            },
+            'charset': 'utf8mb4',  # For full Unicode support
+        }
     }
 }
 COSMOS_DB = {
@@ -100,6 +107,7 @@ COSMOS_DB = {
     "QUERY_METRICS_ENABLED": True,  # Optional: Enable query metrics
     "RESPONSE_DIAGNOSTICS_ENABLED": True,  # Optional: Enable response diagnostics
 }
+
 
 
 # Password validation

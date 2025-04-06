@@ -1,43 +1,59 @@
 from django.conf import settings
-from pymongo import MongoClient
+from azure.cosmos import CosmosClient, exceptions
+
+from azure.cosmos import CosmosClient, exceptions as cosmos_exceptions
+from django.conf import settings
 
 class CosmosDB:
     def __init__(self):
-        """
-        Initialize the Cosmos DB connection and collections.
-        """
-        self.client = MongoClient(
-            settings.COSMOS_DB["URI"],
-            username=settings.COSMOS_DB["NAME"],  # Replace with your Cosmos DB username if needed
-            password=settings.COSMOS_DB["KEY"],
-            tls=True,  # Enable TLS for secure connection
-            tlsAllowInvalidCertificates=True,  # Allow self-signed certificates (for local development)
-        )
-        self.db = self.client[settings.COSMOS_DB["DATABASE_NAME"]]
-        self.collections = {
-            "produtos": self.db[settings.COSMOS_DB["COLLECTIONS"]["PRODUTOS"]],
-            "pedidos": self.db[settings.COSMOS_DB["COLLECTIONS"]["PEDIDOS"]],
-        }
-    def insert(self, document):
-        """
-        Insere um documento na coleção do CosmosDB.
-        """
-        return self.collection.insert_one(document)
+        try:
+            self.client = CosmosClient(
+                url=settings.COSMOS_DB["URI"],
+                credential=settings.COSMOS_DB["KEY"],
+            )
+            self.database = self.client.get_database_client(settings.COSMOS_DB["DATABASE_NAME"])
+            self.containers = {
+                "produtos": self.database.get_container_client(settings.COSMOS_DB["COLLECTIONS"]["PRODUTOS"]),
+            }
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            raise Exception(f"Failed to initialize CosmosDB client: {str(e)}")
 
-    def find_by_id(self, id):
-        """
-        Acha um documento pelo ID.
-        """
-        return self.collection.find_one({"id": id})
+    def insert(self, document, container_name="produtos"):
+        try:
+            return self.containers[container_name].create_item(document)
+        except KeyError:
+            raise ValueError(f"Container {container_name} does not exist.")
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            raise Exception(f"Failed to insert document: {str(e)}")
 
-    def find_all(self):
-        """
-        Acha todos os documentos do Banco de dados.
-        """
-        return list(self.collection.find({}))
+    def find_by_id(self, id, partition_key, container_name="produtos"):
+        try:
+            return self.containers[container_name].read_item(id, partition_key=partition_key)
+        except KeyError:
+            raise ValueError(f"Container {container_name} does not exist.")
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            raise ValueError(f"Document with id {id} not found.")
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            raise Exception(f"Failed to fetch document: {str(e)}")
 
-    def delete(self, id):
-        """
-        Deleta o documento pelo ID.
-        """
-        return self.collection.delete_one({"id": id})
+    def find_all(self, container_name="produtos"):
+        try:
+            return list(self.containers[container_name].query_items(
+                query="SELECT * FROM c",
+                enable_cross_partition_query=True
+            ))
+        except KeyError:
+            raise ValueError(f"Container {container_name} does not exist.")
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            raise Exception(f"Failed to query documents: {str(e)}")
+
+    def delete(self, id, partition_key, container_name="produtos"):
+        try:
+            return self.containers[container_name].delete_item(id, partition_key=partition_key)
+        except KeyError:
+            raise ValueError(f"Container {container_name} does not exist.")
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            raise ValueError(f"Document with id {id} not found.")
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            raise Exception(f"Failed to delete document: {str(e)}")
+    
