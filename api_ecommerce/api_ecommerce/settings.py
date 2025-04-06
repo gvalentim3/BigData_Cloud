@@ -162,3 +162,5 @@ MIGRATION_MODULES = {
     # Desabilita criação de tabelas default na DB relacional.
     'api': None,        
 }
+
+#migration
