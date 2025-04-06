@@ -24,11 +24,13 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Create and start virtual environment
+      - name: Create and activate virtual environment
+        working-directory: .
         run: |
           python -m venv venv
           source venv/bin/activate
           pip install --upgrade pip
+          pip install -r requirements.txt
       
       - name: Install dependencies
         working-directory: .
@@ -36,10 +38,6 @@ jobs:
           # Install pip requirements
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Install dependencies
-        working-directory: .
-        run: |
-          ../venv/bin/pip install -r requirements.txt
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
