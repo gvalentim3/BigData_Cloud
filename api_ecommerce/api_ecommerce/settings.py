@@ -30,7 +30,7 @@ SECRET_KEY = 'django-insecure-o#pdi%udpf=0g9n2wupct7yw#*!467rxjv(t1wenh3d$@e^%oa
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["http://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net"]
+ALLOWED_HOSTS = ["projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net"]
 
 
 # Application definition
