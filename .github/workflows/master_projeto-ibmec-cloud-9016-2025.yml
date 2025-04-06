@@ -43,7 +43,7 @@ jobs:
 
       - name: Run collestatic
         working-directory: ./api_ecommerce
-        run: python manage.py collestatic
+        run: python manage.py collectstatic --noinput --no-ready
 
       - name: Verify installed packages
         run: |
