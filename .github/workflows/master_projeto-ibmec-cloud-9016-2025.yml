@@ -28,13 +28,18 @@ jobs:
         run: |
           python -m venv venv
           source venv/bin/activate
+          pip install --upgrade pip
       
       - name: Install dependencies
-        directory: ./api_ecommerce
+        working-directory: ./api_ecommerce
         run: |
           # Install pip requirements
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+      - name: Install dependencies
+        working-directory: ./api_ecommerce
+        run: |
+          ../venv/bin/pip install -r requirements.txt
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
