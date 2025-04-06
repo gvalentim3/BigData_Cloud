@@ -74,7 +74,9 @@ jobs:
         run: unzip release.zip
 
       - name: Install dependencies
+        working-directory: ./api_ecommerce
         run: |
+          # Install pip requirements
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
