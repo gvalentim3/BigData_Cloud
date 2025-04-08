@@ -60,7 +60,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
-
+CORS_ALLOW_ALL_ORIGINS = True
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
@@ -85,8 +85,10 @@ TEMPLATES = [
 WSGI_APPLICATION = 'api_ecommerce.wsgi.application'
 
 CORS_ALLOWED_ORIGINS = [
-    "projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
+    "http://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
 ]
+
+SECURE_SSL_REDIRECT = True
 
 
 # Database
