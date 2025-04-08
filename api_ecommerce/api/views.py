@@ -31,6 +31,7 @@ class UsuarioCreateListView(APIView):
         }
     )
     def post(self, request):
+        print(request)
         raw_data = request.data.copy()
         cartao_raw_data = None
         if 'cartao' in raw_data and raw_data['cartao']:            
