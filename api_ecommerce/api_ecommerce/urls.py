@@ -32,11 +32,13 @@ schema_view = get_schema_view(
     ),
     public=True,
     permission_classes=(permissions.AllowAny,),
+    # 👇 Força o uso de HTTPS no Swagger
+    url='https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net', 
 )
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     re_path('api/', include('api_ecommerce.api.urls')),
-    re_path(r'^swagger/$', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
+    re_path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
 
 ]
