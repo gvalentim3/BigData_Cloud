@@ -45,7 +45,7 @@ class CartaoCredito (models.Model):
     class Meta:
         db_table = 'cartao_credito'
 
-"""
+
 class Produto(models.Model):
     nome = models.CharField(max_length=255)
     descricao = models.TextField()
@@ -56,8 +56,7 @@ class Produto(models.Model):
         return self.nome
 
 
-
-
+"""
 class Pedido(models.Model):
     STATUS_CHOICES = [
         ('Pendente', 'Pendente'),
