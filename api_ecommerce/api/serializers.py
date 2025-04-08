@@ -32,8 +32,8 @@ class CartaoReadSerializer(serializers.ModelSerializer):
 
 
 class UsuarioReadSerializer (serializers.ModelSerializer):
-    cartoes = CartaoReadSerializer(many=True, read_only=True)
-    enderecos = EnderecoReadSerializer(many=True, read_only=True)
+    cartoes = CartaoReadSerializer(many=True, read_only=True, required=False)
+    enderecos = EnderecoReadSerializer(many=True, read_only=True, required=False)
     
     class Meta:
         model = Usuario
