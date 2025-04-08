@@ -30,10 +30,7 @@ SECRET_KEY = r'django-insecure-o#pdi%udpf=0g9n2wupct7yw#*!467rxjv(t1wenh3d$@e^%o
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = [
-    "projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
-    "localhost",
-    "127.0.0.1"]
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -65,6 +62,7 @@ MIDDLEWARE = [
     'api_ecommerce.api.middleware.CustomAllowedHostsMiddleware'
 ]
 CORS_ALLOW_ALL_ORIGINS = True
+
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
