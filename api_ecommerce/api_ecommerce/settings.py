@@ -33,8 +33,8 @@ DEBUG = True
 ALLOWED_HOSTS = [
     "https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
     "localhost",
-    "127.0.0.1"
-, "169.254.0.0/16"]
+    "127.0.0.1", 
+    "169.254.0.0/16"]
 
 
 # Application definition
