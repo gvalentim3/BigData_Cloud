@@ -31,10 +31,9 @@ SECRET_KEY = r'django-insecure-o#pdi%udpf=0g9n2wupct7yw#*!467rxjv(t1wenh3d$@e^%o
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    "https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
+    "projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
     "localhost",
-    "127.0.0.1", 
-    "169.254.0.0/16"]
+    "127.0.0.1"]
 
 
 # Application definition
@@ -63,6 +62,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'api_ecommerce.api.middleware.CustomAllowedHostsMiddleware'
 ]
 CORS_ALLOW_ALL_ORIGINS = True
 STATIC_URL = '/static/'
