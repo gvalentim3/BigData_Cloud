@@ -524,14 +524,20 @@ class ProdutoCreateListView(APIView):
             )  
 
 class ProdutoReadUpdateDeleteView(APIView):
-    partition_key = "/categoria"
     @swagger_auto_schema(
         operation_description="Retorna um Produto específico",
         manual_parameters=[
             openapi.Parameter(
                 'id_produto',
                 openapi.IN_PATH,
-                description="Product ID",
+                description="id do produto",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            ),
+            openapi.Parameter(
+                'categoria',  
+                openapi.IN_PATH, 
+                description="Categoria do produto (string)",
                 type=openapi.TYPE_STRING,
                 required=True
             )
@@ -542,10 +548,10 @@ class ProdutoReadUpdateDeleteView(APIView):
             400: "Bad Request"
         }
     )
-    def get(self, request, id_produto):
+    def get(self, request, categoria, id_produto):
         container = cosmos_db.containers["produtos"]
         try:
-            product_data = container.read_item(id_produto, partition_key=self.partition_key)
+            product_data = container.read_item(id_produto, partition_key=categoria)
             produto = Produto.from_dict(product_data)
             serializer = ProdutoSerializer(produto)
             return Response(serializer.data)
@@ -567,7 +573,15 @@ class ProdutoReadUpdateDeleteView(APIView):
             openapi.Parameter(
                 'id_produto',
                 openapi.IN_PATH,
+                description="id do produto",
                 type=openapi.TYPE_INTEGER,
+                required=True
+            ),
+            openapi.Parameter(
+                'categoria',  
+                openapi.IN_PATH, 
+                description="Categoria do produto (string)",
+                type=openapi.TYPE_STRING,
                 required=True
             )
         ],
@@ -577,10 +591,10 @@ class ProdutoReadUpdateDeleteView(APIView):
             400: "Bad Request"
         }
     )
-    def patch(self, request, id_produto):
+    def patch(self, request, categoria, id_produto):
         container = cosmos_db.containers["produtos"]
         try:
-            existing_item = container.read_item(id_produto, partition_key=self.partition_key)
+            existing_item = container.read_item(id_produto, partition_key=categoria)
             serializer = ProdutoSerializer(data=request.data, partial=True)
             if not serializer.is_valid():
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -608,6 +622,13 @@ class ProdutoReadUpdateDeleteView(APIView):
                 description="id do produto",
                 type=openapi.TYPE_INTEGER,
                 required=True
+            ),
+            openapi.Parameter(
+                'categoria',  
+                openapi.IN_PATH, 
+                description="Categoria do produto (string)",
+                type=openapi.TYPE_STRING,
+                required=True
             )
         ],
         responses={
@@ -616,10 +637,10 @@ class ProdutoReadUpdateDeleteView(APIView):
             400: "Erro de validação"
         }
     )
-    def delete(self, request, id_produto):
+    def delete(self, request, categoria, id_produto):
         container = cosmos_db.containers["produtos"]
         try:
-            container.delete_item(id_produto, partition_key=self.partition_key)
+            container.delete_item(id_produto, partition_key=categoria)
             return Response(status=status.HTTP_204_NO_CONTENT)
         except cosmos_exceptions.CosmosResourceNotFoundError:
             return Response(
