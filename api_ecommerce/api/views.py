@@ -341,7 +341,7 @@ class CartaoCreateListView(APIView):
             )
 
             cartoes = CartaoCredito.objects.filter(FK_usuario=usuario.id)
-            serializer = CartaoWriteSerializer(cartoes, many=True)
+            serializer = CartaoReadSerializer(cartoes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 class CartaoUpdateDeleteView(APIView):
     @swagger_auto_schema(
