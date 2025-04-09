@@ -61,7 +61,7 @@ class UsuarioCreateListView(APIView):
                 cartao_raw_data["FK_usuario"] = usuario_id
 
                 response = requests.post(
-                    f'http://localhost:8000/api/usuarios/{usuario_id}/cartoes/',
+                    f'https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net/api/usuarios/{usuario_id}/cartoes/',
                     json=cartao_raw_data
                 )
             return Response(user_serializer.errors, status=status.HTTP_200_OK)
