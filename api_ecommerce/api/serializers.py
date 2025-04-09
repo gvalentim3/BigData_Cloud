@@ -50,9 +50,13 @@ class TransacaoRequestSerializer (serializers.ModelSerializer):
     dt_expiracao = serializers.DateField()
     cvv = serializers.CharField(max_length=3)
     valor = serializers.DecimalField(max_digits=10,decimal_places=2)
+    class Meta:
+        fields = ['numero', 'dt_expiracao', 'cvv', 'valor']
 
 class TransacaoResponseSerializer (serializers.ModelSerializer):
     status = serializers.CharField()
     codigo_autorizacao = serializers.UUIDField()
     dt_transacao = serializers.DateTimeField()
     mensagem = serializers.CharField()
+    class Meta:
+        fields = ['status', 'codigo_autorizacao', 'dt_transacao', 'mensagem']

@@ -403,6 +403,21 @@ class CartaoUpdateDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
     
 class AuthorizeTransacaoView(APIView):
+    @swagger_auto_schema(
+        request_body=TransacaoRequestSerializer,
+        id_usuario_parameters=[
+            openapi.Parameter(
+                'id_usuario',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="ID do usuário",
+                required=True
+            )
+        ],
+        responses={202: TransacaoResponseSerializer, 400: "Erro de validação"},
+        operation_description="Autoriza transação de compra com cartão de crédito."
+    )    
+    
     def post(self, request, id_usuario):
         try:
             usuario = Usuario.objects.get(pk=id_usuario)
@@ -466,6 +481,9 @@ class AuthorizeTransacaoView(APIView):
             "dt_transacao": timezone.now(),
             "mensagem": "Compra autorizada com sucesso"
         }
+    
+        response_serializer = TransacaoResponseSerializer(data=transacao_response)            
+        return Response(response_serializer, status=status.HTTP_202_ACCEPTED)
 
 """
 class ProdutoView(APIView):
