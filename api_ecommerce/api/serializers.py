@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from .models import CartaoCredito,Usuario,Endereco,TipoEndereco #Produto,Pedido
+from .models import CartaoCredito,Usuario,Endereco,TipoEndereco,Produto #,Pedido
+from drf_yasg.utils import swagger_auto_schema
 
 class TipoEnderecoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -78,3 +79,38 @@ class TransacaoResponseSerializer(serializers.Serializer):
     mensagem = serializers.CharField(
         help_text="Mensagem descritiva do status"
     )
+
+class ProdutoSerializer(serializers.Serializer):
+    id = serializers.CharField(read_only=True)
+    categoria = serializers.CharField(
+        required=True,
+        max_length=50,
+        help_text="Partition key (categoria do produto)"
+    )
+    nome = serializers.CharField(max_length=100)
+    preco = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=0.01
+    )
+    descricao = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        max_length=500
+    )
+    imagem = serializers.ListField(
+        required=False,
+        allow_blank=True
+    )
+    quantidade = serializers.IntegerField(
+        min_value=0,
+        default=0
+    )
+
+    def create(self, validated_data):
+        return Produto.from_dict(validated_data)
+
+    def update(self, instance, validated_data):
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        return instance

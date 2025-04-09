@@ -44,3 +44,36 @@ class CartaoCredito (models.Model):
 
     class Meta:
         db_table = 'cartao_credito'
+
+class Produto:  
+    def __init__(self, categoria, nome, preco, descricao=None, imagem=None, quantidade=0, id=None):
+        self.id = id or str(uuid4())
+        self.categoria = categoria  # Partition key
+        self.nome = nome
+        self.preco = float(preco)
+        self.descricao = descricao or ""
+        self.imagem = imagem or ""
+        self.quantidade = int(quantidade)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "categoria": self.categoria,
+            "nome": self.nome,
+            "preco": self.preco,
+            "descricao": self.descricao,
+            "imagem": self.imagem,
+            "quantidade": self.quantidade
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        return cls(
+            id=data.get("id"),
+            categoria=data["categoria"],
+            nome=data["nome"],
+            preco=data["preco"],
+            descricao=data.get("descricao"),
+            imagem=data.get("imagem"),
+            quantidade=data.get("quantidade", 0)
+        )

@@ -2,23 +2,17 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
-                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer) #,ProdutoSerializer, PedidoSerializer)
+                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer, ProdutoSerializer) #, PedidoSerializer)
 from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .models import Usuario, Endereco, CartaoCredito, TipoEndereco #, Produto, Pedido
+from .models import Usuario, Endereco, CartaoCredito, TipoEndereco, Produto #, Pedido
 from rest_framework import status
 import requests
 from django.utils import timezone
 import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
-
-# views.py
-from django.http import JsonResponse
-
-def test_view(request):
-    return JsonResponse({"status": "ok"})
 
 
 class UsuarioCreateListView(APIView):
@@ -355,7 +349,7 @@ class CartaoUpdateDeleteView(APIView):
         responses={200: CartaoWriteSerializer, 400: "Erro de validação", 404: "Cartão não encontrado"},
         operation_description="Atualiza parcialmente um cartão pelo ID.",
     )
-    def put(self, request, id_usuario, id_cartao):
+    def patch(self, request, id_usuario, id_cartao):
             try:
                 usuario = Usuario.objects.get(id=id_usuario)
             except Usuario.DoesNotExist:
@@ -478,6 +472,144 @@ class AuthorizeTransacaoView(APIView):
         serializer.is_valid()
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
+class ProdutoView(APIView):
+    partition_key = "categoria"
+    @swagger_auto_schema(
+        operation_description="Cria um novo produto",
+        request_body=ProdutoSerializer,
+        responses={201: ProdutoSerializer, 400: "Bad Request"}
+    )
+    def post(self, request):
+        serializer = ProdutoSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        produto = serializer.create(serializer.validated_data)
+        try:
+            created_item = cosmos_db.containers["produtos"].create_item(
+                body=produto.to_dict(),
+                enable_automatic_id_generation=True
+            )
+            return Response(created_item, status=status.HTTP_201_CREATED)
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @swagger_auto_schema(
+        operation_description="Pega Produtos",
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description="Product ID",
+                type=openapi.TYPE_STRING,
+                required=False
+            )
+        ],
+        responses={
+            200: ProdutoSerializer(many=True),
+            404: "Not Found",
+            400: "Bad Request"
+        }
+    )
+    def get(self, request, id=None):
+        container = cosmos_db.containers["produtos"]
+        try:
+            if id:
+                product_data = container.read_item(id, partition_key=self.partition_key)
+                produto = Produto.from_dict(product_data)
+                serializer = ProdutoSerializer(produto)
+                return Response(serializer.data)
+            else:
+                products = list(container.query_items(
+                    query="SELECT * FROM c",
+                    enable_cross_partition_query=True
+                ))
+                produtos = [Produto.from_dict(p) for p in products]
+                serializer = ProdutoSerializer(produtos, many=True)
+                return Response(serializer.data)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response(
+                {"error": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @swagger_auto_schema(
+        operation_description="Update a product",
+        request_body=ProdutoSerializer,
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                required=True
+            )
+        ],
+        responses={
+            200: ProdutoSerializer,
+            404: "Not Found",
+            400: "Bad Request"
+        }
+    )
+    def patch(self, request, id):
+        container = cosmos_db.containers["produtos"]
+        try:
+            existing_item = container.read_item(id, partition_key=self.partition_key)
+            serializer = ProdutoSerializer(data=request.data, partial=True)
+            if not serializer.is_valid():
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            updated_data = {**existing_item, **serializer.validated_data}
+            updated_item = container.replace_item(id, updated_data)
+            return Response(updated_item)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response(
+                {"error": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @swagger_auto_schema(
+        operation_description="Delete a product",
+        manual_parameters=[
+            openapi.Parameter(
+                'id',
+                openapi.IN_PATH,
+                description="id do produto",
+                type=openapi.TYPE_INTEGER,
+                required=True
+            )
+        ],
+        responses={
+            204: "Produto deletado com sucesso",
+            404: "Produto não encontrado",
+            400: "Erro de validação"
+        }
+    )
+    def delete(self, request, id):
+        container = cosmos_db.containers["produtos"]
+        try:
+            container.delete_item(id, partition_key=self.partition_key)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response(
+                {"error": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
 """
 class ProdutoView(APIView):
     @swagger_auto_schema(
