@@ -29,7 +29,6 @@ class Endereco (models.Model):
     cidade = models.CharField(max_length=100, null=False, blank=False)
     estado = models.CharField(max_length=100, null=False, blank=False)
     cep = models.CharField(max_length=8, null=False, blank=False)
-    tipo_endereco = models.CharField(max_length=45, null=False, blank=False)
     FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
     FK_tp_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos")
 
