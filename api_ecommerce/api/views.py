@@ -13,6 +13,8 @@ from django.utils import timezone
 import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
+from rest_framework.request import Request
+from rest_framework.test import APIRequestFactory
 
 
 class UsuarioCreateListView(APIView):
@@ -25,7 +27,6 @@ class UsuarioCreateListView(APIView):
         }
     )
     def post(self, request):
-        print(request)
         raw_data = request.data.copy()
         cartao_raw_data = None
         if 'cartao' in raw_data and raw_data['cartao']:            
@@ -54,18 +55,22 @@ class UsuarioCreateListView(APIView):
             usuario = user_serializer.save()
             usuario_id = usuario.id
 
+            factory = APIRequestFactory()
+
             if cartao_raw_data: 
                 cartao_raw_data["FK_usuario"] = usuario_id
-                cartao_request = request._request
-                cartao_request.data = cartao_raw_data
-                cartao_response = CartaoCreateListView().post(cartao_request, usuario_id)
-                
+                cartao_request = factory.post('', cartao_raw_data, format='json')
+                cartao_response = CartaoCreateListView().post(Request(cartao_request), usuario_id)
+                if cartao_response.status_code != status.HTTP_201_CREATED:
+                    return cartao_response
 
             if endereco_raw_data:
                 endereco_raw_data["FK_usuario"] = usuario_id
-                endereco_request = request._request
-                endereco_request.data = endereco_raw_data
-                endereco_response = EnderecoCreateListView().post(endereco_request, usuario_id)
+                endereco_request = factory.post('', endereco_raw_data, format='json')
+                endereco_response = EnderecoCreateListView().post(Request(endereco_request), usuario_id)
+                if endereco_response.status_code != status.HTTP_201_CREATED:
+                    return endereco_response
+
             return Response(user_serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
