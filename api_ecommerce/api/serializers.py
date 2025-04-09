@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import CartaoCredito,Usuario,Endereco,TipoEndereco,Produto #,Pedido
 from drf_yasg.utils import swagger_auto_schema
+from decimal import Decimal
 
 class TipoEnderecoSerializer(serializers.ModelSerializer):
     class Meta:
@@ -91,17 +92,17 @@ class ProdutoSerializer(serializers.Serializer):
     preco = serializers.DecimalField(
         max_digits=10,
         decimal_places=2,
-        min_value=0.01
+        min_value=Decimal('0.01')
     )
     descricao = serializers.CharField(
         required=False,
         allow_blank=True,
         max_length=500
     )
-    imagem = serializers.ListField(
-        required=False,
-        allow_blank=True
+    imagens = serializers.ListField(
+        child=serializers.URLField()
     )
+    
     quantidade = serializers.IntegerField(
         min_value=0,
         default=0

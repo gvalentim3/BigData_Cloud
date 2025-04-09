@@ -536,7 +536,7 @@ class ProdutoReadUpdateDeleteView(APIView):
                 openapi.IN_PATH,
                 description="Product ID",
                 type=openapi.TYPE_STRING,
-                required=False
+                required=True
             )
         ],
         responses={

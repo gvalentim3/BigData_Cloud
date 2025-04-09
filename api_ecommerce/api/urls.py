@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
                        CartaoUpdateDeleteView, EnderecoCreateListView, EnderecoUpdateDeleteView,
-                       AuthorizeTransacaoView, test_view) #, ProdutoView, PedidoView)
+                       AuthorizeTransacaoView, ProdutoReadUpdateDeleteView, ProdutoCreateListView)#, PedidoView)
 
 urlpatterns = [
     path('usuarios/', UsuarioCreateListView.as_view(), name='cria&lista-usuarios'), #URL para criação e listagem de usuários.
@@ -14,7 +14,10 @@ urlpatterns = [
     path('usuarios/<int:id_usuario>/cartoes/<int:id_cartao>/', CartaoUpdateDeleteView.as_view(), name='atualiza&delete-cartao-por-usuario'),
 
     path('authorize/<int:id_usuario>/', AuthorizeTransacaoView.as_view(), name='autoriza-transacao'),
-    path('test/', test_view),
+   
+    path('produtos/', ProdutoCreateListView.as_view(), name='cria&lista-prdutos'), #URL para criação e listagem de produtos.
+    path('produtos/<int:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-produto'), #URL para detalhamento, atualizações e remoção de produtos.
+   
 
 
     #path('produtos/', ProdutoView.as_view(), name='produto-lista'),
