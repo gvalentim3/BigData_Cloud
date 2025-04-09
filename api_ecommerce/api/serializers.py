@@ -89,7 +89,7 @@ class ProdutoSerializer(serializers.Serializer):
         help_text="Partition key (categoria do produto)"
     )
     nome = serializers.CharField(max_length=100)
-    preco = serializers.DecimalField(
+    preco = serializers.FloatField(
         max_digits=10,
         decimal_places=2,
         min_value=Decimal('0.01')
