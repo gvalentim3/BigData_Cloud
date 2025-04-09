@@ -30,7 +30,10 @@ class UsuarioCreateListView(APIView):
         cartao_raw_data = None
         if 'cartao' in raw_data and raw_data['cartao']:            
             cartao_raw_data = raw_data.pop('cartao')
-    
+
+        endereco_raw_data = None
+        if 'endereco' in raw_data and raw_data['endereco']:
+            endereco_raw_data = raw_data.pop('endereco')    
         
         user_serializer = UsuarioWriteSerializer(data=raw_data)
         if user_serializer.is_valid():
@@ -57,6 +60,13 @@ class UsuarioCreateListView(APIView):
                 response = requests.post(
                     f'https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net/api/usuarios/{usuario_id}/cartoes/',
                     json=cartao_raw_data
+                )
+            if endereco_raw_data:
+                endereco_raw_data["FK_usuario"] = usuario_id
+
+                response = requests.post(
+                    f'https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net/api/usuarios/{usuario_id}/enderecos/',
+                    json=endereco_raw_data
                 )
             return Response(user_serializer.errors, status=status.HTTP_200_OK)
         
