@@ -431,7 +431,8 @@ class AuthorizeTransacaoView(APIView):
         
         data = serializer.validated_data
         
-        cartao_compra = usuario.cartoes.filter(
+        cartao_compra = CartaoCredito.objects.filter(
+            FK_usuario_id=id_usuario,
             numero=data['numero'],
             cvv=data['cvv']
         ).first()
