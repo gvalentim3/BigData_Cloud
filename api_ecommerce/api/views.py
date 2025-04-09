@@ -212,7 +212,7 @@ class EnderecoCreateListView(APIView):
 
         endereco_raw_data = request.data.copy()
 
-        tipo_endereco_id = None
+        tipo_endereco_id = 2
         if 'tipo_endereco' in endereco_raw_data and endereco_raw_data['tipo_endereco']:            
             tipo_endereco_raw_data = endereco_raw_data.pop('tipo_endereco')
             tipo_endereco_serializer = TipoEnderecoSerializer(tipo_endereco_raw_data)
