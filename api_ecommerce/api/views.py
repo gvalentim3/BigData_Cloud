@@ -600,7 +600,7 @@ class ProdutoReadUpdateDeleteView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             updated_data = {**existing_item, **serializer.validated_data}
-            updated_item = container.replace_item(id, updated_data)
+            updated_item = container.replace_item(id_produto, updated_data)
             return Response(updated_item)
         except cosmos_exceptions.CosmosResourceNotFoundError:
             return Response(
