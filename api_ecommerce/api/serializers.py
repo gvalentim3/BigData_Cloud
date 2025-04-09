@@ -42,8 +42,8 @@ class UsuarioReadSerializer (serializers.ModelSerializer):
         fields = ['id', 'nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
 
 class UsuarioWriteSerializer (serializers.ModelSerializer):
-    cartoes = CartaoReadSerializer(many=True, read_only=False, required=False, default=[])
-    enderecos = EnderecoReadSerializer(many=True, read_only=False, required=False, default=[])
+    cartoes = CartaoReadSerializer(many=True, read_only=True, required=False, default=[])
+    enderecos = EnderecoReadSerializer(many=True, read_only=True, required=False, default=[])
     class Meta:
         model = Usuario
         fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
