@@ -46,13 +46,13 @@ class CartaoCredito (models.Model):
         db_table = 'cartao_credito'
 
 class Produto:  
-    def __init__(self, categoria, nome, preco, descricao=None, imagem=None, quantidade=0, id=None):
+    def __init__(self, categoria, nome, preco, descricao=None, imagens=None, quantidade=0, id=None):
         self.id = id or str(uuid4())
         self.categoria = categoria  # Partition key
         self.nome = nome
         self.preco = float(preco)
         self.descricao = descricao or ""
-        self.imagem = imagem or ""
+        self.imagens = imagens or ""
         self.quantidade = int(quantidade)
 
     def to_dict(self):
@@ -62,7 +62,7 @@ class Produto:
             "nome": self.nome,
             "preco": self.preco,
             "descricao": self.descricao,
-            "imagem": self.imagem,
+            "imagens": self.imagens,
             "quantidade": self.quantidade
         }
 
@@ -74,6 +74,6 @@ class Produto:
             nome=data["nome"],
             preco=data["preco"],
             descricao=data.get("descricao"),
-            imagem=data.get("imagem"),
+            imagens=data.get("imagens"),
             quantidade=data.get("quantidade", 0)
         )
