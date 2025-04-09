@@ -12,7 +12,7 @@ class TipoEnderecoSerializer(serializers.ModelSerializer):
 class EnderecoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Endereco
-        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'FK_tp_endereco', 'FK_usuario']
+        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco', 'FK_tp_endereco', 'FK_usuario']
 
 class EnderecoReadSerializer(serializers.ModelSerializer):
     tipo_endereco = TipoEnderecoSerializer(many=False)
