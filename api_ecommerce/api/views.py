@@ -472,7 +472,7 @@ class AuthorizeTransacaoView(APIView):
         serializer.is_valid()
         return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
-class ProdutoView(APIView):
+class ProdutoCreateListView(APIView):
     partition_key = "categoria"
     @swagger_auto_schema(
         operation_description="Cria um novo produto",
@@ -495,7 +495,41 @@ class ProdutoView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     @swagger_auto_schema(
-        operation_description="Pega Produtos",
+        operation_description="Lista todos os Produtos",
+        responses={
+            200: ProdutoSerializer(many=True),
+            404: "Not Found",
+            400: "Bad Request"
+        }
+    )
+    def get(self, request):
+        container = cosmos_db.containers["produtos"]
+        try:
+            products = list(container.query_items(
+                query="SELECT * FROM c",
+                enable_cross_partition_query=True
+            ))
+            produtos = [Produto.from_dict(p) for p in products]
+            serializer = ProdutoSerializer(produtos, many=True)
+            return Response(serializer.data)
+        except cosmos_exceptions.CosmosResourceNotFoundError:
+            return Response(
+                {"error": "Product not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"error": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+
+    
+
+class ProdutoReadUpdateDeleteView(APIView):
+    partition_key = "categoria"
+    @swagger_auto_schema(
+        operation_description="Retorna um Produto específico",
         manual_parameters=[
             openapi.Parameter(
                 'id',
@@ -511,22 +545,13 @@ class ProdutoView(APIView):
             400: "Bad Request"
         }
     )
-    def get(self, request, id=None):
+    def get(self, request, id):
         container = cosmos_db.containers["produtos"]
         try:
-            if id:
-                product_data = container.read_item(id, partition_key=self.partition_key)
-                produto = Produto.from_dict(product_data)
-                serializer = ProdutoSerializer(produto)
-                return Response(serializer.data)
-            else:
-                products = list(container.query_items(
-                    query="SELECT * FROM c",
-                    enable_cross_partition_query=True
-                ))
-                produtos = [Produto.from_dict(p) for p in products]
-                serializer = ProdutoSerializer(produtos, many=True)
-                return Response(serializer.data)
+            product_data = container.read_item(id, partition_key=self.partition_key)
+            produto = Produto.from_dict(product_data)
+            serializer = ProdutoSerializer(produto)
+            return Response(serializer.data)
         except cosmos_exceptions.CosmosResourceNotFoundError:
             return Response(
                 {"error": "Product not found"},
@@ -539,7 +564,7 @@ class ProdutoView(APIView):
             )
 
     @swagger_auto_schema(
-        operation_description="Update a product",
+        operation_description="Atualiza um produto pelo ID",
         request_body=ProdutoSerializer,
         manual_parameters=[
             openapi.Parameter(
@@ -578,7 +603,7 @@ class ProdutoView(APIView):
             )
 
     @swagger_auto_schema(
-        operation_description="Delete a product",
+        operation_description="Deleta um produto pelo ID.",
         manual_parameters=[
             openapi.Parameter(
                 'id',
@@ -609,7 +634,6 @@ class ProdutoView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
 """
 class ProdutoView(APIView):
     @swagger_auto_schema(
