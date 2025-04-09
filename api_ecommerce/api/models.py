@@ -47,6 +47,7 @@ class CartaoCredito (models.Model):
 
 
 class Produto(models.Model):
+    categoria = models.CharField(max_length=255)
     nome = models.CharField(max_length=255)
     descricao = models.TextField()
     preco = models.DecimalField(max_digits=10, decimal_places=2)

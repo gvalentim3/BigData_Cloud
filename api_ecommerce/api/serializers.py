@@ -61,9 +61,9 @@ class TransacaoResponseSerializer (serializers.ModelSerializer):
 class ProdutoReadSerializer (serializers.ModelSerializer):
     class Meta:
         model = Produto
-        fields = ['id', 'nome', 'descricao', 'preco', 'estoque']
+        fields = ['id', 'categoria','nome', 'descricao', 'preco', 'estoque']
 
 class ProdutoWriteSerializer (serializers.ModelSerializer):    
     class Meta:
         model = Usuario
-        fields = ['nome', 'descricao', 'preco', 'estoque']
+        fields = ['categoria','nome', 'descricao', 'preco', 'estoque']
