@@ -90,9 +90,7 @@ class ProdutoSerializer(serializers.Serializer):
     )
     nome = serializers.CharField(max_length=100)
     preco = serializers.FloatField(
-        max_digits=10,
-        decimal_places=2,
-        min_value=Decimal('0.01')
+        min_value='0.01'
     )
     descricao = serializers.CharField(
         required=False,
