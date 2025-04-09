@@ -414,7 +414,11 @@ class AuthorizeTransacaoView(APIView):
                 required=True
             )
         ],
-        responses={202: TransacaoResponseSerializer, 400: "Erro de validação"},
+        responses={
+            202: TransacaoResponseSerializer,
+            400: "Erro de validação",
+            404: "Usuário ou cartão não encontrado"
+        },
         operation_description="Autoriza transação de compra com cartão de crédito."
     )    
     
@@ -431,59 +435,48 @@ class AuthorizeTransacaoView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        numero_cartao = serializer.validated_data['numero']
-        cvv_cartao = serializer.validated_data['cvv']
-        dt_expiracao_cartao = serializer.validated_data['dt_expiracao']
-        valor_transacao = serializer.validated_data['valor']
-
-        cartao_compra = None
-        for cartao in usuario.cartoes.all():
-            if cartao.numero == numero_cartao and cartao.cvv == cvv_cartao:
-                cartao_compra = cartao
-                break
+        data = serializer.validated_data
         
+        cartao_compra = usuario.cartoes.filter(
+            numero=data['numero'],
+            cvv=data['cvv']
+        ).first()
+
         if not cartao_compra:
-            transacao_response = {
-                "status": "NOT_AUTHORIZED",
-                "dt_transacao": timezone.now(),
-                "message": "Cartão não encontrado para o usuário"
-            }
-
-            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
-            return Response(response_serializer, status=status.HTTP_404_NOT_FOUND)
+            return self._error_response("Cartão não encontrado para o usuário")
         
-        if dt_expiracao_cartao < timezone.now():
-            transacao_response = {
-                "status": "NOT_AUTHORIZED",
-                "dt_transacao": timezone.now(),
-                "message": "Cartão expirado"
-            }
-
-            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
-            return Response(response_serializer, status=status.HTTP_400_BAD_REQUEST)
+        if data['dt_expiracao'] < timezone.now().date():
+            return self._error_response("Cartão expirado")
+            
+        if cartao_compra.saldo < data['valor']:
+            return self._error_response("Saldo insuficiente")
         
-        if cartao_compra.saldo < valor_transacao:
-            transacao_response = {
-                "status": "NOT_AUTHORIZED",
-                "dt_transacao": timezone.now(),
-                "message": "Cartão sem saldo suficiente para realizar a compra"
-            }
-
-            response_serializer = TransacaoResponseSerializer(data=transacao_response)            
-            return Response(response_serializer, status=status.HTTP_400_BAD_REQUEST)
-        
-        cartao_compra.saldo -= valor_transacao
+        cartao_compra.saldo -= data['valor']
         cartao_compra.save()
         
-        transacao_response = {
+        return self._success_response()
+
+    def _error_response(self, message):
+        response_data = {
+            "status": "NOT_AUTHORIZED",
+            "codigo_autorizacao": uuid.uuid4(),
+            "dt_transacao": timezone.now(),
+            "mensagem": message
+        }
+        serializer = TransacaoResponseSerializer(data=response_data)
+        serializer.is_valid()
+        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
+
+    def _success_response(self):
+        response_data = {
             "status": "AUTHORIZED",
             "codigo_autorizacao": uuid.uuid4(),
             "dt_transacao": timezone.now(),
             "mensagem": "Compra autorizada com sucesso"
         }
-    
-        response_serializer = TransacaoResponseSerializer(data=transacao_response)            
-        return Response(response_serializer, status=status.HTTP_202_ACCEPTED)
+        serializer = TransacaoResponseSerializer(data=response_data)
+        serializer.is_valid()
+        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 """
 class ProdutoView(APIView):

@@ -45,18 +45,36 @@ class UsuarioWriteSerializer (serializers.ModelSerializer):
         fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone']
 
 
-class TransacaoRequestSerializer (serializers.ModelSerializer):
-    numero = serializers.CharField(max_length=16)
-    dt_expiracao = serializers.DateField()
-    cvv = serializers.CharField(max_length=3)
-    valor = serializers.DecimalField(max_digits=10,decimal_places=2)
-    class Meta:
-        fields = ['numero', 'dt_expiracao', 'cvv', 'valor']
+class TransacaoRequestSerializer(serializers.Serializer):
+    numero = serializers.CharField(
+        max_length=16,
+        min_length=16,
+        help_text="Número do cartão (16 dígitos)"
+    )
+    dt_expiracao = serializers.DateField(
+        help_text="Data de expiração do cartão no formato YYYY-MM-DD"
+    )
+    cvv = serializers.CharField(
+        max_length=3,
+        min_length=3,
+        help_text="Código de segurança do cartão (3 dígitos)"
+    )
+    valor = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        help_text="Valor da transação (ex: 10.00)"
+    )
 
-class TransacaoResponseSerializer (serializers.ModelSerializer):
-    status = serializers.CharField()
-    codigo_autorizacao = serializers.UUIDField()
-    dt_transacao = serializers.DateTimeField()
-    mensagem = serializers.CharField()
-    class Meta:
-        fields = ['status', 'codigo_autorizacao', 'dt_transacao', 'mensagem']
+class TransacaoResponseSerializer(serializers.Serializer):
+    status = serializers.CharField(
+        help_text="Status da autorização (AUTHORIZED/NOT_AUTHORIZED)"
+    )
+    codigo_autorizacao = serializers.UUIDField(
+        help_text="Código único de identificação da transação"
+    )
+    dt_transacao = serializers.DateTimeField(
+        help_text="Data/hora da transação"
+    )
+    mensagem = serializers.CharField(
+        help_text="Mensagem descritiva do status"
+    )
