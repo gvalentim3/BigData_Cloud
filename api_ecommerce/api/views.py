@@ -220,8 +220,6 @@ class EnderecoCreateListView(APIView):
             if tipo_endereco_serializer.is_valid():
                 tipo_endereco = tipo_endereco_serializer.save()
                 tipo_endereco_id = tipo_endereco.id
-
-
         endereco_raw_data['FK_tp_endereco'] = tipo_endereco_id
         endereco_raw_data['FK_usuario'] = usuario.id
         serializer = EnderecoWriteSerializer(data=endereco_raw_data)
