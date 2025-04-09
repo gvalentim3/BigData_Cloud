@@ -531,7 +531,7 @@ class ProdutoReadUpdateDeleteView(APIView):
                 'id_produto',
                 openapi.IN_PATH,
                 description="id do produto",
-                type=openapi.TYPE_INTEGER,
+                type=openapi.TYPE_STRING,
                 required=True
             ),
             openapi.Parameter(
@@ -574,7 +574,7 @@ class ProdutoReadUpdateDeleteView(APIView):
                 'id_produto',
                 openapi.IN_PATH,
                 description="id do produto",
-                type=openapi.TYPE_INTEGER,
+                type=openapi.TYPE_STRING,
                 required=True
             ),
             openapi.Parameter(
@@ -620,7 +620,7 @@ class ProdutoReadUpdateDeleteView(APIView):
                 'id_produto',
                 openapi.IN_PATH,
                 description="id do produto",
-                type=openapi.TYPE_INTEGER,
+                type=openapi.TYPE_STRING,
                 required=True
             ),
             openapi.Parameter(

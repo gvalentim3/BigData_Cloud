@@ -16,7 +16,7 @@ urlpatterns = [
     path('authorize/<int:id_usuario>/', AuthorizeTransacaoView.as_view(), name='autoriza-transacao'),
    
     path('produtos/', ProdutoCreateListView.as_view(), name='cria&lista-prdutos'), #URL para criação e listagem de produtos.
-    path('produtos/<str:categoria>/<int:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-produto'), #URL para detalhamento, atualizações e remoção de produtos.
+    path('produtos/<str:categoria>/<str:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-produto'), #URL para detalhamento, atualizações e remoção de produtos.
 
 
     #path('produtos/', ProdutoView.as_view(), name='produto-lista'),
