@@ -524,7 +524,7 @@ class ProdutoCreateListView(APIView):
             )  
 
 class ProdutoReadUpdateDeleteView(APIView):
-    partition_key = "categoria"
+    partition_key = "/categoria"
     @swagger_auto_schema(
         operation_description="Retorna um Produto específico",
         manual_parameters=[
