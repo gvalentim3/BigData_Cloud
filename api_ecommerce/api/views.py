@@ -56,19 +56,17 @@ class UsuarioCreateListView(APIView):
 
             if cartao_raw_data: 
                 cartao_raw_data["FK_usuario"] = usuario_id
+                cartao_request = request._request
+                cartao_request.data = cartao_raw_data
+                cartao_response = CartaoCreateListView().post(cartao_request, usuario_id)
+                
 
-                response = requests.post(
-                    f'https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net/api/usuarios/{usuario_id}/cartoes/',
-                    json=cartao_raw_data
-                )
             if endereco_raw_data:
                 endereco_raw_data["FK_usuario"] = usuario_id
-
-                response = requests.post(
-                    f'https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net/api/usuarios/{usuario_id}/enderecos/',
-                    json=endereco_raw_data
-                )
-            return Response(user_serializer.errors, status=status.HTTP_200_OK)
+                endereco_request = request._request
+                endereco_request.data = endereco_raw_data
+                endereco_response = EnderecoCreateListView().post(endereco_request, usuario_id)
+            return Response(user_serializer.data, status=status.HTTP_201_CREATED)
         
         return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -180,6 +178,10 @@ class UsuarioReadUpdateDeleteView(APIView):
 
 
 class EnderecoCreateListView(APIView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.endereco_serializer = EnderecoWriteSerializer
+
     @swagger_auto_schema(
         request_body=EnderecoWriteSerializer,
         id_usuario_parameters=[
@@ -295,6 +297,10 @@ class EnderecoUpdateDeleteView(APIView):
 
 
 class CartaoCreateListView(APIView):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cartao_serializer = CartaoWriteSerializer
+
     @swagger_auto_schema(
         request_body=CartaoWriteSerializer,
         id_usuario_parameters=[
