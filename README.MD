@@ -9,6 +9,7 @@ Funcionalidades principais:
 - Criação, edição e remoção de usuários no banco relacional
 - Criação (obrigatoriamente vinculada a um usuário), edição e remoção de cartões e endereços.
 - Criação, edição e remoção de produtos no banco não relacional.
+- Autorização de compra de acordo com regras de negócio de saldo de cartão de crédito
 
 Tecnologias Utilizadas
 - *API Gateway*: Azure API Management
