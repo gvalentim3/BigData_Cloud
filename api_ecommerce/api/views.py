@@ -8,13 +8,12 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import Usuario, Endereco, CartaoCredito, TipoEndereco, Produto #, Pedido
 from rest_framework import status
-import requests
 from django.utils import timezone
 import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
 from rest_framework.request import Request
-from rest_framework.test import APIRequestFactory
+from .services import criar_cartao, criar_endereco
 
 
 class UsuarioCreateListView(APIView):
@@ -22,7 +21,7 @@ class UsuarioCreateListView(APIView):
         operation_description="Criação um novo usuário. Necessário enviar também pelo menos um cadastro de cartão e um de endereço",
         request_body=UsuarioWriteSerializer,
         responses={
-            201: UsuarioWriteSerializer,
+            201: "Usuário criado com sucesso!",
             400: "Erro de validação: Email ou CPF já cadastrados."
         }
     )
@@ -55,20 +54,23 @@ class UsuarioCreateListView(APIView):
             usuario = user_serializer.save()
             usuario_id = usuario.id
 
-            factory = APIRequestFactory()
+            if cartao_raw_data:
+                cartao_response, status_code = criar_cartao(
+                    usuario_id=usuario_id,
+                    cartao_data=cartao_raw_data
+                )
 
-            if cartao_raw_data: 
-                cartao_raw_data["FK_usuario"] = usuario_id
-                cartao_request = factory.post('', cartao_raw_data, format='json')
-                cartao_response = CartaoCreateListView().post(Request(cartao_request), usuario_id)
-                if cartao_response.status_code != status.HTTP_201_CREATED:
+                if status_code != status.HTTP_201_CREATED:
                     return cartao_response
-
+            
             if endereco_raw_data:
-                endereco_raw_data["FK_usuario"] = usuario_id
-                endereco_request = factory.post('', endereco_raw_data, format='json')
-                endereco_response = EnderecoCreateListView().post(Request(endereco_request), usuario_id)
-                if endereco_response.status_code != status.HTTP_201_CREATED:
+                endereco_response, status_code = criar_endereco(
+                    usuario_id=usuario_id,
+                    endereco_data=endereco_raw_data
+                )
+
+
+                if status_code != status.HTTP_201_CREATED:
                     return endereco_response
 
             return Response(user_serializer.data, status=status.HTTP_201_CREATED)
@@ -202,32 +204,7 @@ class EnderecoCreateListView(APIView):
         operation_description="Cria um novo Endereço vinculado a um usuário.",
     )
     def post(self, request, id_usuario):
-        try:
-            usuario = Usuario.objects.get(pk=id_usuario)
-        except Usuario.DoesNotExist:
-            return Response(
-                {"error": "Usuário não encontrado"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        endereco_raw_data = request.data.copy()
-
-        tipo_endereco_id = 2
-        if 'tipo_endereco' in endereco_raw_data and endereco_raw_data['tipo_endereco']:            
-            tipo_endereco_raw_data = endereco_raw_data.pop('tipo_endereco')
-            tipo_endereco_serializer = TipoEnderecoSerializer(tipo_endereco_raw_data)
-            
-            if tipo_endereco_serializer.is_valid():
-                tipo_endereco = tipo_endereco_serializer.save()
-                tipo_endereco_id = tipo_endereco.id
-        endereco_raw_data['FK_tp_endereco'] = tipo_endereco_id
-        endereco_raw_data['FK_usuario'] = usuario.id
-        serializer = EnderecoWriteSerializer(data=endereco_raw_data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return criar_endereco(usuario_id=id_usuario, endereco_data=request.data, request=request)
     
     @swagger_auto_schema(
         operation_description="Lista todos os endereços de um usuário (através do ID)",
@@ -251,7 +228,7 @@ class EnderecoCreateListView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-            enderecos = Endereco.objects.filter(FK_usuario=usuario.id)
+            enderecos = Endereco.objects.filter(usuario=usuario.id)
             serializer = EnderecoReadSerializer(enderecos, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 class EnderecoUpdateDeleteView(APIView):
@@ -270,7 +247,7 @@ class EnderecoUpdateDeleteView(APIView):
             )
         
             try:
-                endereco = Endereco.objects.get(id=id_endereco, FK_usuario=usuario.id)
+                endereco = Endereco.objects.get(id=id_endereco, usuario=usuario.id)
             except Endereco.DoesNotExist:
                 return Response(
                     {"error": "Endereço não encontrado."}, status=status.HTTP_404_NOT_FOUND
@@ -289,7 +266,7 @@ class EnderecoUpdateDeleteView(APIView):
     )
     def delete(self, request, id_usuario, id_endereco):
         try:
-            endereco = Endereco.objects.get(id=id_endereco, FK_usuario=id_usuario)
+            endereco = Endereco.objects.get(id=id_endereco, usuario=id_usuario)
         except Endereco.DoesNotExist:
             return Response(
                 {"error": "Endereço não encontrado para este usuário."}, status=status.HTTP_404_NOT_FOUND
@@ -319,22 +296,7 @@ class CartaoCreateListView(APIView):
         operation_description="Cria um novo Cartão.",
     )
     def post(self, request, id_usuario):
-        try:
-            usuario = Usuario.objects.get(pk=id_usuario)
-        except Usuario.DoesNotExist:
-            return Response(
-                {"error": "Usuário não encontrado"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        data_copy = request.data.copy()
-        data_copy['FK_usuario'] = usuario.id
-        serializer = CartaoWriteSerializer(data=data_copy)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return criar_cartao(usuario_id=id_usuario, cartao_data=request.data, request=request)
 
 
     @swagger_auto_schema(
@@ -359,7 +321,7 @@ class CartaoCreateListView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-            cartoes = CartaoCredito.objects.filter(FK_usuario=usuario.id)
+            cartoes = CartaoCredito.objects.filter(usuario=usuario.id)
             serializer = CartaoReadSerializer(cartoes, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
 class CartaoUpdateDeleteView(APIView):
@@ -378,7 +340,7 @@ class CartaoUpdateDeleteView(APIView):
             )
         
             try:
-                cartao = CartaoCredito.objects.get(id=id_cartao, FK_usuario=usuario.id)
+                cartao = CartaoCredito.objects.get(id=id_cartao, usuario=usuario.id)
             except CartaoCredito.DoesNotExist:
                 return Response(
                     {"error": "Cartão não encontrado neste usuário."}, status=status.HTTP_404_NOT_FOUND
@@ -406,7 +368,7 @@ class CartaoUpdateDeleteView(APIView):
             )
         
         try:
-            cartao = CartaoCredito.objects.get(id=id_cartao, FK_usuario=id_usuario)
+            cartao = CartaoCredito.objects.get(id=id_cartao, usuario=id_usuario)
         except CartaoCredito.DoesNotExist:
             return Response(
                 {"error": "Cartão não encontrado para este usuário."}, status=status.HTTP_404_NOT_FOUND
@@ -451,7 +413,7 @@ class AuthorizeTransacaoView(APIView):
         data = serializer.validated_data
         
         cartao_compra = CartaoCredito.objects.filter(
-            FK_usuario_id=id_usuario,
+            usuario_id=id_usuario,
             numero=data['numero'],
             cvv=data['cvv']
         ).first()
@@ -672,6 +634,40 @@ class ProdutoReadUpdateDeleteView(APIView):
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+class ProdutoSearchView(APIView):
+    def get(self, request):
+        """
+        formato da request que virá do bot
+
+        {
+            nome_produto: nome
+        }
+        
+
+        api faz a busca no banco usando o nome (query)
+
+
+        """
+        nome_buscado = request.data['nome']
+        
+        container = cosmos_db.containers["produtos"]
+
+        query = "SELECT * FROM c WHERE CONTAINS(LOWER(c.nome), @name)"
+
+        parameters = [
+            {"name": "@name", "value": nome_buscado.lower()}
+        ]
+
+        products = list(container.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True  # Only needed if no partition key is specified
+        ))
+        
+        produtos = [Produto.from_dict(p) for p in products]
+        serializer = ProdutoSerializer(produtos, many=True)
+        return Response(serializer.data)
 """
 class ProdutoView(APIView):
     @swagger_auto_schema(
