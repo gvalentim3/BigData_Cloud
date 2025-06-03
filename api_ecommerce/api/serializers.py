@@ -108,6 +108,13 @@ class ProdutoSerializer(serializers.Serializer):
         default=0
     )
 
+    def validate(self, attrs):
+        if 'nome' in attrs and attrs['nome']:
+            attrs['nome'] = attrs['nome'].lower()
+        if 'categoria' in attrs and attrs['categoria']:
+            attrs['categoria'] = attrs['categoria'].lower()
+        return attrs
+
     def create(self, validated_data):
         return Produto.from_dict(validated_data)
 
