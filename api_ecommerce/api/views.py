@@ -636,7 +636,25 @@ class ProdutoReadUpdateDeleteView(APIView):
             )
 
 class ProdutoSearchView(APIView):
-    def get(self, request):
+    @swagger_auto_schema(
+        operation_description="Retorna um Produto específico",
+        manual_parameters=[
+            openapi.Parameter(
+                'nome',
+                openapi.IN_PATH,
+                description="nome do produto",
+                type=openapi.TYPE_STRING,
+                required=True
+            )
+        ],
+        responses={
+            200: ProdutoSerializer(many=True),
+            404: "Not Found",
+            400: "Bad Request"
+        }
+    )
+    
+    def get(self, request, nome):
         """
         formato da request que virá do bot
 
@@ -649,25 +667,27 @@ class ProdutoSearchView(APIView):
 
 
         """
-        nome_buscado = request.data['nome']
+        # nome_buscado = request.data['nome']
         
         container = cosmos_db.containers["produtos"]
 
         query = "SELECT * FROM c WHERE CONTAINS(LOWER(c.nome), @name)"
 
         parameters = [
-            {"name": "@name", "value": nome_buscado.lower()}
+            {"name": "@name", "value": nome.lower()}
         ]
 
         products = list(container.query_items(
             query=query,
             parameters=parameters,
-            enable_cross_partition_query=True  # Only needed if no partition key is specified
+            enable_cross_partition_query=True
         ))
         
         produtos = [Produto.from_dict(p) for p in products]
         serializer = ProdutoSerializer(produtos, many=True)
         return Response(serializer.data)
+    
+
 """
 class ProdutoView(APIView):
     @swagger_auto_schema(
