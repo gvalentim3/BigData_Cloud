@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import (UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
+from .views import (ProdutoSearchView, UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
                        CartaoUpdateDeleteView, EnderecoCreateListView, EnderecoUpdateDeleteView,
                        AuthorizeTransacaoView, ProdutoReadUpdateDeleteView, ProdutoCreateListView)#, PedidoView)
 
@@ -15,15 +15,8 @@ urlpatterns = [
 
     path('authorize/<int:id_usuario>/', AuthorizeTransacaoView.as_view(), name='autoriza-transacao'),
    
-    path('produtos/', ProdutoCreateListView.as_view(), name='cria&lista-prdutos'), #URL para criação e listagem de produtos.
+    path('produtos/', ProdutoCreateListView.as_view(), name='cria&lista-produtos'), #URL para criação e listagem de produtos.
     path('produtos/<str:categoria>/<str:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-produto'), #URL para detalhamento, atualizações e remoção de produtos.
-
-
-    #path('produtos/', ProdutoView.as_view(), name='produto-lista'),
-    #path('produtos/<int:id_produto>/', ProdutoView.as_view(), name='produto-detail'),
-
-    #path('pedidos/', PedidoView.as_view(), name='pedido-lista'),
-    #path('pedidos/<int:id_pedido>/', PedidoView.as_view(), name='pedido-detail'),
-
+    path('produtos/<str:nome>', ProdutoSearchView.as_view(), name='busca-produtos')
 ]
 
