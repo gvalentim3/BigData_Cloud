@@ -185,7 +185,7 @@ class EnderecoCreateListView(APIView):
         if errors:
             return Response(errors, status=status.HTTP_400_BAD_REQUEST if 'error' not in errors else status.HTTP_404_NOT_FOUND)
 
-        return Response(EnderecoReadSerializer(endereco).data, status=status.HTTP_201_CREATED)
+        return Response(EnderecoWriteSerializer(endereco).data, status=status.HTTP_201_CREATED)
     
     @swagger_auto_schema(
         operation_description="Lista todos os endereços de um usuário (através do ID)",
