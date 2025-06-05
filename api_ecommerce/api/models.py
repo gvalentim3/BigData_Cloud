@@ -16,15 +16,6 @@ class Usuario (models.Model):
     class Meta:
         db_table = 'usuario'
     
-class TipoEndereco(models.Model):
-    tipo = models.CharField(max_length=45)
-
-    def __str__(self):
-        return self.tipo
-
-    class Meta:
-        db_table = 'tipo_endereco'
-
 class Endereco (models.Model):
     logradouro = models.CharField(max_length=200, null=False, blank=False)
     complemento = models.CharField(max_length=200, null=False, blank=True, default="")
@@ -33,7 +24,6 @@ class Endereco (models.Model):
     estado = models.CharField(max_length=100, null=False, blank=False)
     cep = models.CharField(max_length=8, null=False, blank=False)
     usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
-    tipo_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos_tipos")
 
     def __str__(self):
         return self.logradouro
