@@ -1,21 +1,15 @@
 from rest_framework import serializers
-from .models import CartaoCredito,Usuario,Endereco,TipoEndereco,Produto #,Pedido
+from .models import CartaoCredito,Usuario,Endereco,Produto #,Pedido
 from drf_yasg.utils import swagger_auto_schema
 from decimal import Decimal
-
-class TipoEnderecoSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = TipoEndereco
-        fields = ['tipo']
 
 
 class EnderecoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Endereco
-        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'tipo_endereco', 'usuario']
+        fields = ['logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep']
 
 class EnderecoReadSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Endereco
         fields = ['id', 'logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep']
@@ -24,12 +18,12 @@ class EnderecoReadSerializer(serializers.ModelSerializer):
 class CartaoWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = CartaoCredito
-        fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo', 'usuario']
+        fields = ['numero', 'dt_expiracao', 'cvv', 'saldo']
 
 class CartaoReadSerializer(serializers.ModelSerializer):
         class Meta:
             model = CartaoCredito
-            fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo']
+            fields = ['id', 'numero', 'dt_expiracao', 'cvv', 'saldo', 'usuario']
 
 
 class UsuarioReadSerializer (serializers.ModelSerializer):
@@ -40,13 +34,20 @@ class UsuarioReadSerializer (serializers.ModelSerializer):
         model = Usuario
         fields = ['id', 'nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
 
-class UsuarioWriteSerializer (serializers.ModelSerializer):
-    cartoes = CartaoReadSerializer(many=True, read_only=True, required=False, default=[])
-    enderecos = EnderecoReadSerializer(many=True, read_only=True, required=False, default=[])
+class UsuarioCreateSerializer (serializers.ModelSerializer):    
     class Meta:
         model = Usuario
-        fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone', 'cartoes', 'enderecos']
+        fields = ['nome', 'email', 'dt_nascimento', 'cpf', 'telefone']
 
+        def validate_email(self, email):
+            if Usuario.objects.filter(email=email).exists():
+                raise serializers.ValidationError("Email já cadastrado.")
+            return email
+        
+        def validate_cpf(self, cpf):
+            if Usuario.objects.filter(cpf=cpf).exists():
+                raise serializers.ValidationError("CPF já cadastrado.")
+            return cpf
 
 class TransacaoRequestSerializer(serializers.Serializer):
     numero = serializers.CharField(
