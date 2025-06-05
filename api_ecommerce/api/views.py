@@ -1,81 +1,54 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import (UsuarioReadSerializer, UsuarioWriteSerializer, CartaoReadSerializer, 
+from .serializers import (UsuarioReadSerializer, UsuarioCreateSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
-                             TipoEnderecoSerializer, TransacaoRequestSerializer, TransacaoResponseSerializer, ProdutoSerializer) #, PedidoSerializer)
+                             TransacaoRequestSerializer, TransacaoResponseSerializer, ProdutoSerializer) #, PedidoSerializer)
 from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .models import Usuario, Endereco, CartaoCredito, TipoEndereco, Produto #, Pedido
+from .models import Usuario, Endereco, CartaoCredito, Produto #, Pedido
 from rest_framework import status
 from django.utils import timezone
 import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
 from rest_framework.request import Request
-from .services import criar_cartao, criar_endereco
+from .services import UsuarioService, CartaoService, EnderecoService
 
 
 class UsuarioCreateListView(APIView):
     @swagger_auto_schema(
         operation_description="Criação um novo usuário. Necessário enviar também pelo menos um cadastro de cartão e um de endereço",
-        request_body=UsuarioWriteSerializer,
+        request_body=UsuarioCreateSerializer,
         responses={
             201: "Usuário criado com sucesso!",
             400: "Erro de validação: Email ou CPF já cadastrados."
         }
     )
     def post(self, request):
-        raw_data = request.data.copy()
-        cartao_raw_data = None
-        if 'cartao' in raw_data and raw_data['cartao']:            
-            cartao_raw_data = raw_data.pop('cartao')
+        serializer = UsuarioCreateSerializer(data=request.data)
 
-        endereco_raw_data = None
-        if 'endereco' in raw_data and raw_data['endereco']:
-            endereco_raw_data = raw_data.pop('endereco')    
+        if not serializer.is_valid():
+            return Response(
+                serializer.errors, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
-        user_serializer = UsuarioWriteSerializer(data=raw_data)
-        if user_serializer.is_valid():
-            email = user_serializer.validated_data.get('email')
-            cpf = user_serializer.validated_data.get('cpf')
-            if Usuario.objects.filter(email=email).exists():
-                return Response(
-                    {'error': 'Este email já foi cadastrado anteriormente.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            if Usuario.objects.filter(cpf=cpf).exists():
-                return Response(
-                    {'error': 'Este CPF já foi cadastrado anteriormente.'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-            
-            usuario = user_serializer.save()
-            usuario_id = usuario.id
+        usuario = serializer.save()
 
-            if cartao_raw_data:
-                cartao_response, status_code = criar_cartao(
-                    usuario_id=usuario_id,
-                    cartao_data=cartao_raw_data
-                )
+        cartoes_data = request.data.get('cartoes', [])
+        enderecos_data = request.data.get('enderecos', [])
 
-                if status_code != status.HTTP_201_CREATED:
-                    return cartao_response
-            
-            if endereco_raw_data:
-                endereco_response, status_code = criar_endereco(
-                    usuario_id=usuario_id,
-                    endereco_data=endereco_raw_data
-                )
+        UsuarioService.cria_cartoes_enderecos(
+            usuario.id,
+            cartoes_data,
+            enderecos_data
+        )
 
-
-                if status_code != status.HTTP_201_CREATED:
-                    return endereco_response
-
-            return Response(user_serializer.data, status=status.HTTP_201_CREATED)
-        
-        return Response(user_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {"id": usuario.id, "message": "Usuário criado com sucesso"},
+            status=status.HTTP_201_CREATED
+        )
 
     @swagger_auto_schema(
         operation_description="Lista de todos os usuários cadastrados.",
@@ -127,9 +100,9 @@ class UsuarioReadUpdateDeleteView(APIView):
                 required=True
             )
         ],
-        request_body=UsuarioWriteSerializer,
+        request_body=UsuarioCreateSerializer,
         responses={
-            200: UsuarioWriteSerializer,
+            200: UsuarioCreateSerializer,
             400: "Erro de validação: Email já cadastrado.",
             404: "Usuário não encontrado."
         }
@@ -200,11 +173,19 @@ class EnderecoCreateListView(APIView):
                 required=True
             )
         ],
-        responses={201: CartaoWriteSerializer, 400: "Erro de validação"},
+        responses={201: EnderecoWriteSerializer, 400: "Erro de validação"},
         operation_description="Cria um novo Endereço vinculado a um usuário.",
     )
-    def post(self, request, id_usuario):
-        return criar_endereco(usuario_id=id_usuario, endereco_data=request.data, request=request)
+    def post(self, request, id_usuario):        
+        endereco, errors = EnderecoService.cria_endereco(
+            usuario_id=id_usuario, 
+            endereco_data=request.data
+        )
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST if 'error' not in errors else status.HTTP_404_NOT_FOUND)
+
+        return Response(EnderecoWriteSerializer(endereco).data, status=status.HTTP_201_CREATED)
     
     @swagger_auto_schema(
         operation_description="Lista todos os endereços de um usuário (através do ID)",
@@ -295,8 +276,17 @@ class CartaoCreateListView(APIView):
         responses={201: CartaoWriteSerializer, 400: "Erro de validação"},
         operation_description="Cria um novo Cartão.",
     )
-    def post(self, request, id_usuario):
-        return criar_cartao(usuario_id=id_usuario, cartao_data=request.data, request=request)
+    def post(self, request, id_usuario):        
+        cartao, errors = CartaoService.cria_cartao(
+            usuario_id=id_usuario, 
+            cartao_data=request.data
+        )
+
+        if errors:
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST if 'error' not in errors else status.HTTP_404_NOT_FOUND)
+
+        return Response(CartaoReadSerializer(cartao).data, status=status.HTTP_201_CREATED)
+    
 
 
     @swagger_auto_schema(

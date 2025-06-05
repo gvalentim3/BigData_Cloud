@@ -1,22 +1,30 @@
-from django.urls import path
+from django.urls import path, include
 from .views import (ProdutoSearchView, UsuarioReadUpdateDeleteView, UsuarioCreateListView, CartaoCreateListView, 
                        CartaoUpdateDeleteView, EnderecoCreateListView, EnderecoUpdateDeleteView,
                        AuthorizeTransacaoView, ProdutoReadUpdateDeleteView, ProdutoCreateListView)#, PedidoView)
 
+
 urlpatterns = [
-    path('usuarios/', UsuarioCreateListView.as_view(), name='cria&lista-usuarios'), #URL para criação e listagem de usuários.
-    path('usuarios/<int:id_usuario>/', UsuarioReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-usuario'), #URL para detalhamento, atualizações e remoção de usuários.
-    
-    path('usuarios/<int:id_usuario>/enderecos/', EnderecoCreateListView.as_view(), name='lista-enderecos-por-usuario'),
-    path('usuarios/<int:id_usuario>/enderecos/<int:id_endereco>/', EnderecoUpdateDeleteView.as_view(), name='detalhes-endereco-por-usuario'),
-    
-    path('usuarios/<int:id_usuario>/cartoes/', CartaoCreateListView.as_view(), name='cria&lista-cartoes-por-usuario'), 
-    path('usuarios/<int:id_usuario>/cartoes/<int:id_cartao>/', CartaoUpdateDeleteView.as_view(), name='atualiza&delete-cartao-por-usuario'),
-
-    path('authorize/<int:id_usuario>/', AuthorizeTransacaoView.as_view(), name='autoriza-transacao'),
-   
-    path('produtos/', ProdutoCreateListView.as_view(), name='cria&lista-produtos'), #URL para criação e listagem de produtos.
-    path('produtos/<str:categoria>/<str:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='detalhes&atualizacoes&delete-produto'), #URL para detalhamento, atualizações e remoção de produtos.
-    path('produtos/<str:nome>', ProdutoSearchView.as_view(), name='busca-produtos')
+    path('usuarios/', include([
+        path('', UsuarioCreateListView.as_view(), name='users-list-create'),
+        path('<int:id_usuario>/', UsuarioReadUpdateDeleteView.as_view(), name='users-detail'),
+        
+        path('<int:id_usuario>/enderecos/', include([
+            path('', EnderecoCreateListView.as_view(), name='user-addresses-list'),
+            path('<int:id_endereco>/', EnderecoUpdateDeleteView.as_view(), name='user-addresses-detail'),
+        ])),
+            
+        path('<int:id_usuario>/cartoes/', include([
+            path('', CartaoCreateListView.as_view(), name='user-cards-list'),
+            path('<int:id_cartao>/', CartaoUpdateDeleteView.as_view(), name='user-cards-detail'),
+        ])),
+        
+        path('<int:id_usuario>/authorize/', AuthorizeTransacaoView.as_view(), name='authorize-transaction'),
+    ])),
+        
+    path('produtos/', include([
+        path('', ProdutoCreateListView.as_view(), name='products-list-create'),
+        path('busca/<str:nome>', ProdutoSearchView.as_view(), name='products-search'),
+        path('<str:categoria>/<str:id_produto>/', ProdutoReadUpdateDeleteView.as_view(), name='products-detail'),
+    ]))
 ]
-
