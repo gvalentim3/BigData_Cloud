@@ -12,7 +12,7 @@ class EnderecoWriteSerializer(serializers.ModelSerializer):
 class EnderecoReadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Endereco
-        fields = ['id', 'logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep']
+        fields = ['id', 'logradouro', 'complemento', 'bairro', 'cidade', 'estado', 'cep', 'usuario']
 
 
 class CartaoWriteSerializer(serializers.ModelSerializer):
@@ -91,9 +91,10 @@ class ProdutoSerializer(serializers.Serializer):
         help_text="Partition key (categoria do produto)"
     )
     nome = serializers.CharField(max_length=100)
-    preco = serializers.FloatField(
-        min_value=float(Decimal('0.01')),  # Explicitly convert to float
-        max_value=100000000.0
+    preco = serializers.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        min_value=Decimal('0.01')
     )
     descricao = serializers.CharField(
         required=False,
@@ -110,10 +111,20 @@ class ProdutoSerializer(serializers.Serializer):
     )
 
     def validate(self, attrs):
-        if 'nome' in attrs and attrs['nome']:
-            attrs['nome'] = attrs['nome'].lower()
-        if 'categoria' in attrs and attrs['categoria']:
-            attrs['categoria'] = attrs['categoria'].lower()
+        attrs['nome'] = attrs.get('nome', '').lower()
+        attrs['categoria'] = attrs.get('categoria', '').lower()
+
+        if attrs.get('preco', 0) <= 0:
+            raise serializers.ValidationError(
+                {"preco": "O preço deve ser maior que zero."}
+            )
+        
+        for url in attrs.get('imagens', []):
+            if not url.startswith(('http://', 'https://')):
+                raise serializers.ValidationError(
+                    {"imagens": f"URL inválida: {url}"}
+                )
+            
         return attrs
 
     def create(self, validated_data):

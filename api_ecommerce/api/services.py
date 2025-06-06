@@ -10,7 +10,7 @@ class CartaoService():
         except Usuario.DoesNotExist:
             return None, {"error": "Usuário não encontrado"}
 
-        serializer = CartaoWriteSerializer(data={**cartao_data, 'usuario': usuario.id})
+        serializer = CartaoWriteSerializer(data={**cartao_data})
 
         if not serializer.is_valid():
             return None, serializer.errors    
@@ -29,7 +29,7 @@ class EnderecoService():
         except Usuario.DoesNotExist:
             return None, {"error": "Usuário não encontrado"}
         
-        serializer = EnderecoWriteSerializer(data={**endereco_data, 'usuario': usuario.id})
+        serializer = EnderecoWriteSerializer(data={**endereco_data})
 
         if not serializer.is_valid():
             return None, serializer.errors    
@@ -40,7 +40,6 @@ class EnderecoService():
         )
 
         return endereco, None
-
 
 class UsuarioService():
     def cria_cartoes_enderecos(id_usuario, cartoes_data, enderecos_data):
@@ -62,3 +61,4 @@ class UsuarioService():
                 )
             except:
                 continue
+
