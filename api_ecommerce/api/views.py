@@ -2,18 +2,18 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from .serializers import (UsuarioReadSerializer, UsuarioCreateSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
-                             TransacaoRequestSerializer, TransacaoResponseSerializer, ProdutoSerializer) #, PedidoSerializer)
+                            ProdutoSerializer, PedidoSerializer)
 from .apps import cosmos_db
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
-from .models import Usuario, Endereco, CartaoCredito, Produto #, Pedido
+from .models import Usuario, Endereco, CartaoCredito, Produto
 from rest_framework import status
 from django.utils import timezone
 import uuid
 from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
 from rest_framework.request import Request
-from .services import UsuarioService, CartaoService, EnderecoService
+from .services import PedidoService, ProdutoService, TransacaoService, UsuarioService, CartaoService, EnderecoService
 
 
 class UsuarioCreateListView(APIView):
@@ -367,82 +367,6 @@ class CartaoUpdateDeleteView(APIView):
         cartao.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-class AuthorizeTransacaoView(APIView):
-    @swagger_auto_schema(
-        request_body=TransacaoRequestSerializer,
-        id_usuario_parameters=[
-            openapi.Parameter(
-                'id_usuario',
-                openapi.IN_PATH,
-                type=openapi.TYPE_INTEGER,
-                description="ID do usuário",
-                required=True
-            )
-        ],
-        responses={
-            202: TransacaoResponseSerializer,
-            400: "Erro de validação",
-            404: "Usuário ou cartão não encontrado"
-        },
-        operation_description="Autoriza transação de compra com cartão de crédito."
-    )    
-    
-    def post(self, request, id_usuario):
-        try:
-            usuario = Usuario.objects.get(pk=id_usuario)
-        except Usuario.DoesNotExist:
-            return Response(
-                {"error": "Usuário não encontrado"},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        serializer = TransacaoRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        
-        data = serializer.validated_data
-        
-        cartao_compra = CartaoCredito.objects.filter(
-            usuario_id=id_usuario,
-            numero=data['numero'],
-            cvv=data['cvv']
-        ).first()
-
-        if not cartao_compra:
-            return self._error_response("Cartão não encontrado para o usuário")
-        
-        if data['dt_expiracao'] < timezone.now().date():
-            return self._error_response("Cartão expirado")
-            
-        if cartao_compra.saldo < data['valor']:
-            return self._error_response("Saldo insuficiente")
-        
-        cartao_compra.saldo -= data['valor']
-        cartao_compra.save()
-        
-        return self._success_response()
-
-    def _error_response(self, message):
-        response_data = {
-            "status": "NOT_AUTHORIZED",
-            "codigo_autorizacao": uuid.uuid4(),
-            "dt_transacao": timezone.now(),
-            "mensagem": message
-        }
-        serializer = TransacaoResponseSerializer(data=response_data)
-        serializer.is_valid()
-        return Response(serializer.data, status=status.HTTP_400_BAD_REQUEST)
-
-    def _success_response(self):
-        response_data = {
-            "status": "AUTHORIZED",
-            "codigo_autorizacao": uuid.uuid4(),
-            "dt_transacao": timezone.now(),
-            "mensagem": "Compra autorizada com sucesso"
-        }
-        serializer = TransacaoResponseSerializer(data=response_data)
-        serializer.is_valid()
-        return Response(serializer.data, status=status.HTTP_202_ACCEPTED)
 
 class ProdutoCreateListView(APIView):
     container = cosmos_db.containers["produtos"]
@@ -687,4 +611,81 @@ class ProdutoSearchView(APIView):
             return Response(
                 {"error": f"Erro no banco de dados: {str(e)}"},
                 status=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+        
+class PedidoCreateView(APIView):
+    container_pedidos = cosmos_db.containers["pedidos"]
+    container_produtos = cosmos_db.containers["produtos"]
+    
+    @swagger_auto_schema(
+        operation_description="Cria um novo produto",
+        request_body=PedidoSerializer,
+        responses={201: "Pedido #{numero_pedido} criado com sucesso", 400: "Bad Request"}
+    )
+    def post(self, request):
+        """
+        {
+            id_usuario = int,
+            produtos = [
+                {
+                    id_produto =
+                    preco = 
+                    quantidade = 
+                }
+            ],
+            preco_total = 
+            id_cartao = 
+            id_endereco = 
+            data = 
+        }
+        
+        """
+
+        serializer = PedidoSerializer(data=request.data)
+
+        if not serializer.is_valid():
+            return Response({"errors": "Dados inválidos",
+                            "details": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+
+        try:
+            cartao_informado = CartaoCredito.objects.get(id=validated_data['id_cartao'])
+
+            transacao_response = TransacaoService().autoriza_transacao(
+                                                cartao=cartao_informado, 
+                                                valor=validated_data['preco_total'],
+                                                cvv_request=request.data['cvv'])
+            
+            if transacao_response.status_code == status.HTTP_400_BAD_REQUEST:
+                return transacao_response
+            
+            produto_service = ProdutoService(container=self.container_produtos)
+
+            for produto in validated_data['produtos']:
+                produto_service.retira_quantidade_produto(
+                    id_produto=produto['id_produto'],
+                    quantidade=produto['quantidade'],
+                    categoria=produto['categoria_produto']
+                )
+
+            numero_pedido = PedidoService(self.container_pedidos).set_numero_pedido()
+
+            dados_pedido = {**serializer.validated_data, 'numero': numero_pedido}
+
+            pedido_criado = self.container_pedidos.create_item(
+                body=dados_pedido,
+                enable_automatic_id_generation=True
+            )
+
+            return Response(
+                {"success": f"Pedido #{numero_pedido} criado com sucesso"},
+                status=status.HTTP_201_CREATED
+            )
+        
+        except Exception as e:
+            return Response(
+                {"error": "Erro ao processar pedido", "details": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
