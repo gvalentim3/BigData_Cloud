@@ -14,11 +14,12 @@ class CosmosDB:
             self.database = self.client.get_database_client(settings.COSMOS_DB["DATABASE_NAME"])
             self.containers = {
                 "produtos": self.database.get_container_client(settings.COSMOS_DB["COLLECTIONS"]["PRODUTOS"]),
+                "pedidos": self.database.get_container_client(settings.COSMOS_DB["COLLECTIONS"]["PEDIDOS"])
             }
         except cosmos_exceptions.CosmosHttpResponseError as e:
             raise Exception(f"Failed to initialize CosmosDB client: {str(e)}")
 
-    def insert(self, document, container_name="produtos"):
+    def insert(self, document, container_name):
         try:
             return self.containers[container_name].create_item(document)
         except KeyError:
@@ -26,7 +27,7 @@ class CosmosDB:
         except cosmos_exceptions.CosmosHttpResponseError as e:
             raise Exception(f"Failed to insert document: {str(e)}")
 
-    def find_by_id(self, id, partition_key, container_name="produtos"):
+    def find_by_id(self, id, partition_key, container_name):
         try:
             return self.containers[container_name].read_item(id, partition_key=partition_key)
         except KeyError:
@@ -36,7 +37,7 @@ class CosmosDB:
         except cosmos_exceptions.CosmosHttpResponseError as e:
             raise Exception(f"Failed to fetch document: {str(e)}")
 
-    def find_all(self, container_name="produtos"):
+    def find_all(self, container_name):
         try:
             return list(self.containers[container_name].query_items(
                 query="SELECT * FROM c",
@@ -47,7 +48,7 @@ class CosmosDB:
         except cosmos_exceptions.CosmosHttpResponseError as e:
             raise Exception(f"Failed to query documents: {str(e)}")
 
-    def delete(self, id, partition_key, container_name="produtos"):
+    def delete(self, id, partition_key, container_name):
         try:
             return self.containers[container_name].delete_item(id, partition_key=partition_key)
         except KeyError:
