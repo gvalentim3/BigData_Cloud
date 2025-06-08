@@ -1,7 +1,6 @@
 from botbuilder.dialogs import ComponentDialog, WaterfallDialog, WaterfallStepContext
 from botbuilder.core import MessageFactory
-from botbuilder.dialogs.prompts import TextPrompt, PromptOptions, ChoicePrompt
-from botbuilder.dialogs.choices import Choice
+from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
 from botbuilder.schema import ActionTypes, HeroCard, CardAction, CardImage
 from botbuilder.core import CardFactory
 from api.product_api import ProductAPI
@@ -13,7 +12,7 @@ class ConsultarProdutosDialog(ComponentDialog):
         super(ConsultarProdutosDialog, self).__init__("ConsultarProdutosDialog")
 
         self.add_dialog(TextPrompt(TextPrompt.__name__))
-        self.add_dialog(ChoicePrompt("ChoiceDentro"))
+        self.add_dialog(TextPrompt("ChoiceDentro"))
         self.add_dialog(ComprarProdutoDialog(user_state))
 
         self.add_dialog(
@@ -39,7 +38,6 @@ class ConsultarProdutosDialog(ComponentDialog):
 
     async def product_name_search_step(self, step_context: WaterfallStepContext):
         product_name = step_context.result.strip()
-
         produto_api = ProductAPI()
 
         try:
@@ -82,43 +80,36 @@ class ConsultarProdutosDialog(ComponentDialog):
                 )
                 await step_context.context.send_activity(MessageFactory.attachment(card))
 
-
         else:
             await step_context.context.send_activity("❌ Erro inesperado ao processar resposta da API.")
 
-        # SEMPRE perguntar o que deseja fazer
+        card = HeroCard(
+            title="📋 O que você gostaria de fazer agora?",
+            buttons=[
+                CardAction(type=ActionTypes.post_back, title="Consultar outro produto", value="consultar_outro"),
+                CardAction(type=ActionTypes.post_back, title="Voltar ao menu principal", value="voltar_menu"),
+            ],
+        )
+        await step_context.context.send_activity(MessageFactory.attachment(CardFactory.hero_card(card)))
+
         return await step_context.prompt(
             "ChoiceDentro",
             PromptOptions(
-                prompt=MessageFactory.text("O que deseja fazer agora?"),
-                choices=[
-                    Choice("Consultar outro produto"),
-                    Choice("Voltar ao menu principal"),
-                ],
+                prompt=MessageFactory.text("Clique em uma opção acima ou digite sua escolha:"),
+                retry_prompt=MessageFactory.text("❌ Opção inválida. Digite 'consultar_outro' ou 'voltar_menu'."),
             ),
         )
 
     async def next_action_step(self, step_context: WaterfallStepContext):
-        result = step_context.result
+        option = step_context.result.lower()
 
-        # Verifica se foi retornado um Choice válido
-        option = ""
-        if hasattr(result, "value"):
-            option = result.value.lower()
-        elif isinstance(result, str):
-            option = result.lower()
-        else:
-            await step_context.context.send_activity("⚠️ Opção inválida. Retornando ao menu principal.")
-            return await step_context.replace_dialog("MainDialog")
-
-        if option == "consultar outro produto":
+        if option == "consultar_outro":
             await step_context.context.send_activity("🔍 Vamos consultar outro produto.")
             return await step_context.replace_dialog(self.initial_dialog_id)
 
-        elif option == "voltar ao menu principal":
-            # Manda para o MainDialog com a flag de "voltar_menu"
-            return await step_context.replace_dialog("MainDialog", {"acao": "voltar_menu"})
+        elif option == "voltar_menu":
+            await step_context.context.send_activity("🏠 Voltando ao menu principal...")
+            return await step_context.replace_dialog("MainDialog")
 
-        # fallback — se der algo errado, volta para MainDialog
-        await step_context.context.send_activity("⚠️ Opção não reconhecida. Retornando ao menu principal.")
+        await step_context.context.send_activity("🤔 Não entendi sua escolha. Voltando ao menu principal.")
         return await step_context.replace_dialog("MainDialog")
