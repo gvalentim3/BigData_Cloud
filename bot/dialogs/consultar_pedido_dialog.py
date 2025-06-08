@@ -42,17 +42,17 @@ class ConsultarPedidoDialog(ComponentDialog):
             )
         )
     
-    def criar_card_pedido(self, pedido):
+    def criar_card_pedido(self, pedido: dict):
         produtos_text = "\n".join(
             f"- {p['nome_produto']} (Qtd: {p['quantidade']}, Preço unit.: R$ {float(p['preco_produto']):.2f})"
-            for p in pedido[0].get("produtos", [])
+            for p in pedido.get("produtos", [])
         )
-        total = float(pedido[0].get('preco_total', '0.0'))
+        total = float(pedido.get('preco_total', '0.0'))
         
         card = CardFactory.hero_card(
             HeroCard(
-                title=f"Pedido #{pedido[0]['numero']}",
-                subtitle=f"Data: {pedido[0].get('data', 'Desconhecida')}",
+                title=f"Pedido #{pedido['numero']}",
+                subtitle=f"Data: {pedido.get('data', 'Desconhecida')}",
                 text=f"🧾 Valor Total: R$ {total:.2f}\n\n📦 Produtos:\n{produtos_text}"
             )
         )
