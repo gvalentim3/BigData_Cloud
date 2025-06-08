@@ -73,10 +73,6 @@ class PedidoAPI:
             
             # Padroniza a resposta para incluir todos campos esperados
             pedido_data = response.json()
-            
-            # Verifica se a resposta contém a estrutura completa
-            if not all(key in pedido_data for key in ['id', 'usuario', 'produtos']):
-                return {"error": "Estrutura do pedido incompleta"}
                 
             return pedido_data
             
