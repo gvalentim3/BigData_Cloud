@@ -58,34 +58,6 @@ class UsuarioCreateListView(APIView):
         return Response(serializer.data)
 class UsuarioReadUpdateDeleteView(APIView):
     @swagger_auto_schema(
-        operation_description="Retorna um usuário específico pelo ID ou lista todos os usuários se nenhum ID for fornecido.",
-        id_usuario_parameters=[
-            openapi.Parameter(
-                'id_usuario',
-                openapi.IN_PATH,
-                type=openapi.TYPE_INTEGER,
-                description="ID do usuário",
-                required=True
-            )
-        ],
-        responses={
-            200: UsuarioReadSerializer,
-            404: "Usuário não encontrado."
-        }
-    )
-    def get(self, request, id_usuario):
-        try:
-            usuario = Usuario.objects.get(id=id_usuario)
-            serializer = UsuarioReadSerializer(usuario)
-            return Response(serializer.data)
-        except Usuario.DoesNotExist:
-            return Response(
-                {'error': 'Usuário não encontrado.'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-
-    @swagger_auto_schema(
         operation_description="Atualiza um usuário pelo ID (parcialmente).",
         id_usuario_parameters=[
             openapi.Parameter(
@@ -151,16 +123,35 @@ class UsuarioReadUpdateDeleteView(APIView):
             )
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 class UsuarioCPFSearch(APIView):
+    @swagger_auto_schema(
+        operation_description="Retorna um usuário específico pelo CPF fornecido.",
+        id_usuario_parameters=[
+            openapi.Parameter(
+                'cpf',
+                openapi.IN_PATH,
+                type=openapi.TYPE_INTEGER,
+                description="CPF do usuário",
+                required=True
+            )
+        ],
+        responses={
+            200: UsuarioReadSerializer,
+            404: "Usuário não encontrado."
+        }
+    )    
     def get(self, request, cpf):
         try:
             usuario, error = UsuarioService.busca_por_cpf(cpf)
+
+            serializer = UsuarioReadSerializer(usuario)
 
             if error:
                 return Response(error, status=status.HTTP_404_NOT_FOUND)
             
             # CORREÇÃO: Mudar para HTTP_200_OK quando o usuário é encontrado
-            return Response({"id_usuario": usuario.id}, status=status.HTTP_200_OK)
+            return Response(serializer.data, status=status.HTTP_200_OK)
         
         except Exception as e:
             # Adicione este print para debug (remova depois)
