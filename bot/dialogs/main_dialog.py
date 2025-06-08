@@ -3,6 +3,7 @@ from botbuilder.dialogs import (
     WaterfallDialog,
     WaterfallStepContext,
     DialogTurnResult,
+    TextPrompt,
 )
 from botbuilder.dialogs.prompts import (
     ChoicePrompt,
@@ -15,7 +16,7 @@ from dialogs.consultar_produtos_dialog import ConsultarProdutosDialog
 from dialogs.consultar_pedido_dialog import ConsultarPedidoDialog
 from dialogs.extrato_compra_dialog import ExtratoCompraDialog
 from dialogs.comprar_produto_dialog import ComprarProdutoDialog
-
+from data_models.user_profile import UserProfile
 
 class MainDialog(ComponentDialog):
     def __init__(self, user_state: UserState):
@@ -31,12 +32,14 @@ class MainDialog(ComponentDialog):
 
         # Prompts
         self.add_dialog(ChoicePrompt(ChoicePrompt.__name__))
+        self.add_dialog(TextPrompt("CpfPrompt", self.validate_cpf))
 
         # Waterfall
         self.add_dialog(
             WaterfallDialog(
                 "mainWaterfallDialog",
                 [
+                    self.get_cpf_step,  # Novo passo
                     self.prompt_option_step,
                     self.process_option_step,
                 ],
@@ -45,9 +48,38 @@ class MainDialog(ComponentDialog):
 
         self.initial_dialog_id = "mainWaterfallDialog"
 
+    async def get_cpf_step(self, step_context: WaterfallStepContext) -> DialogTurnResult:
+        user_profile_accessor = self.user_state.create_property("UserProfile")
+        user_profile = await user_profile_accessor.get(step_context.context, UserProfile)
+
+        if user_profile.cpf:
+            # Já tem CPF
+            return await step_context.next(user_profile.cpf)
+
+        # Não tem CPF, pedir
+        return await step_context.prompt(
+            "CpfPrompt",
+            PromptOptions(
+                prompt=MessageFactory.text("🪪 Bem-vindo! Por favor, digite seu CPF (11 dígitos):"),
+                retry_prompt=MessageFactory.text("❌ CPF inválido. Digite novamente."),
+            )
+        )
+
+    async def validate_cpf(self, prompt_context):
+        cpf = prompt_context.recognized.value
+        return cpf.isdigit() and len(set(cpf)) > 1
+
     async def prompt_option_step(
         self, step_context: WaterfallStepContext
     ) -> DialogTurnResult:
+
+        # Se veio CPF da etapa anterior, salvar no UserProfile
+        if step_context.result is not None and isinstance(step_context.result, str) and step_context.result.isdigit():
+            user_profile_accessor = self.user_state.create_property("UserProfile")
+            user_profile = await user_profile_accessor.get(step_context.context, UserProfile)
+            user_profile.cpf = step_context.result
+            await user_profile_accessor.set(step_context.context, user_profile)
+            await self.user_state.save_changes(step_context.context)
 
         # Se o diálogo foi iniciado com dados da compra, redireciona diretamente
         if isinstance(step_context.options, dict):
@@ -61,10 +93,9 @@ class MainDialog(ComponentDialog):
                     },
                 )
             elif acao == "voltar_menu":
-                # Apenas cai no menu sem fazer nada
                 await step_context.context.send_activity("🏠 Voltando ao menu principal...")
 
-        # Caso contrário, mostra o menu principal
+        # Menu principal
         return await step_context.prompt(
             ChoicePrompt.__name__,
             PromptOptions(
@@ -83,7 +114,6 @@ class MainDialog(ComponentDialog):
 
         option = ""
 
-        # Proteção contra None
         if step_context.result is not None:
             if hasattr(step_context.result, "value"):
                 option = step_context.result.value.lower()
@@ -93,7 +123,6 @@ class MainDialog(ComponentDialog):
             await step_context.context.send_activity("Opção inválida. Retornando ao menu principal.")
             return await step_context.replace_dialog(self.initial_dialog_id)
 
-        # Navegação
         if option == "consultar produtos":
             return await step_context.begin_dialog("ConsultarProdutosDialog")
         elif option == "consultar pedidos":
@@ -101,6 +130,5 @@ class MainDialog(ComponentDialog):
         elif option == "extrato de compras":
             return await step_context.begin_dialog("ExtratoCompraDialog")
 
-        # fallback — não deveria acontecer
         await step_context.context.send_activity("Opção não reconhecida. Retornando ao menu principal.")
         return await step_context.replace_dialog(self.initial_dialog_id)

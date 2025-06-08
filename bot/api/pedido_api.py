@@ -4,7 +4,7 @@ from config import DefaultConfig
 class PedidoAPI:
     def __init__(self):
         self.config = DefaultConfig()
-        self.base_url = f"{self.config.URL_PREFIX}/api/pedidos"
+        self.base_url = f"{self.config.URL_PREFIX}/api/pedidos/"
 
     def post_pedidos(self, pedido_data):
         """

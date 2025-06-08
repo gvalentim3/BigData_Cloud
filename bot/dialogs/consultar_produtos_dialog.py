@@ -61,7 +61,10 @@ class ConsultarProdutosDialog(ComponentDialog):
                 card = CardFactory.hero_card(
                     HeroCard(
                         title=produto["nome"],
-                        text=f"💲 Preço: R$ {produto['preco']}",
+                        text=(
+                            f"💲 Preço: R$ {produto['preco']}\n"
+                            f"📦 Em estoque: {produto.get('quantidade', 'Indisponível')} unidades"
+                        ),
                         subtitle=produto["descricao"],
                         images=[CardImage(url=imagem) for imagem in produto.get("imagens", [])],
                         buttons=[
@@ -78,6 +81,7 @@ class ConsultarProdutosDialog(ComponentDialog):
                     )
                 )
                 await step_context.context.send_activity(MessageFactory.attachment(card))
+
 
         else:
             await step_context.context.send_activity("❌ Erro inesperado ao processar resposta da API.")

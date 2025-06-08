@@ -1,29 +1,33 @@
 from botbuilder.dialogs import ComponentDialog, WaterfallDialog, WaterfallStepContext
 from botbuilder.core import MessageFactory, UserState
 from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
+from botbuilder.schema import HeroCard, CardAction, ActionTypes
+from botbuilder.core import CardFactory
 from api.pedido_api import PedidoAPI
-from data_models.pedido_model import PedidoModel
-import re
+from api.user_api import UserAPI
+from data_models.user_profile import UserProfile
 
 class ComprarProdutoDialog(ComponentDialog):
     def __init__(self, user_state: UserState):
         super().__init__("ComprarProdutoDialog")
         self.user_state = user_state
 
-        # Prompts com validações específicas
-        self.add_dialog(TextPrompt("cpfPrompt", self.validate_cpf))
-        self.add_dialog(TextPrompt("numeroCartaoPrompt", self.validate_card_number))
-        self.add_dialog(TextPrompt("expiracaoPrompt", self.validate_expiration_date))
+        # Prompts
+        self.add_dialog(TextPrompt("CategoriaPrompt"))
+        self.add_dialog(TextPrompt("QuantidadePrompt", self.validate_quantidade))
+        self.add_dialog(TextPrompt("CartaoIdPrompt", self.validate_id))
         self.add_dialog(TextPrompt("cvvPrompt", self.validate_cvv))
+        self.add_dialog(TextPrompt("EnderecoIdPrompt", self.validate_id))
 
         self.add_dialog(
             WaterfallDialog(
                 "comprarProdutoWaterfall",
                 [
-                    self.cpf_step,
-                    self.cartao_step,
-                    self.expiracao_step,
+                    self.get_usuario_id_step,
+                    self.categoria_step,
+                    self.quantidade_step,
                     self.cvv_step,
+                    self.escolher_endereco_step,
                     self.confirmar_pedido_step,
                 ]
             )
@@ -31,91 +35,139 @@ class ComprarProdutoDialog(ComponentDialog):
 
         self.initial_dialog_id = "comprarProdutoWaterfall"
 
-    # ---------- Validações ----------
-    async def validate_cpf(self, prompt_context):
-        cpf = prompt_context.recognized.value
-        if not (cpf and cpf.isdigit() and len(cpf) == 11 and len(set(cpf)) > 1):
-            await prompt_context.context.send_activity("❌ CPF inválido. Digite 11 dígitos numéricos válidos.")
-            return False
-        return True
-
-    async def validate_card_number(self, prompt_context):
-        card = prompt_context.recognized.value
-        return card.isdigit() and len(card) in (15, 16)
-
-    async def validate_expiration_date(self, prompt_context):
-        date = prompt_context.recognized.value
-        match = re.match(r"^(0[1-9]|1[0-2])/(\d{2})$", date)
-        if not match:
-            await prompt_context.context.send_activity("❌ Data inválida. Use o formato MM/AA.")
-            return False
-        return True
+    async def validate_quantidade(self, prompt_context):
+        return prompt_context.recognized.value.isdigit() and int(prompt_context.recognized.value) > 0
 
     async def validate_cvv(self, prompt_context):
         cvv = prompt_context.recognized.value
         return cvv.isdigit() and len(cvv) in (3, 4)
 
-    # ---------- Etapas do Diálogo ----------
-    async def cpf_step(self, step_context: WaterfallStepContext):
-        product_id = step_context.options.get("productId")
-        product_name = step_context.options.get("productName")
+    async def validate_id(self, prompt_context):
+        return prompt_context.recognized.value.isdigit()
 
-        step_context.values["productId"] = product_id
-        step_context.values["productName"] = product_name
+    async def get_usuario_id_step(self, step_context: WaterfallStepContext):
+        user_profile_accessor = self.user_state.create_property("UserProfile")
+        user_profile = await user_profile_accessor.get(step_context.context, UserProfile)
+
+        if not user_profile.cpf:
+            await step_context.context.send_activity("❌ CPF não encontrado. Volte ao menu principal.")
+            return await step_context.end_dialog()
+
+        user_api = UserAPI()
+        usuario_info = user_api.get_usuario_by_cpf(user_profile.cpf)
+        step_context.values["usuario_id"] = usuario_info["id"]
+
+        step_context.values["productId"] = step_context.options.get("productId")
+        step_context.values["productName"] = step_context.options.get("productName")
 
         return await step_context.prompt(
-            "cpfPrompt",
+            "CategoriaPrompt",
             PromptOptions(
-                prompt=MessageFactory.text("🪪 Digite seu CPF (apenas números):"),
-                retry_prompt=MessageFactory.text("❌ CPF inválido. Por favor, insira novamente.")
+                prompt=MessageFactory.text("🗂 Digite a categoria do produto:"),
             )
         )
 
-    async def cartao_step(self, step_context: WaterfallStepContext):
-        step_context.values["cpf"] = step_context.result
+    async def categoria_step(self, step_context: WaterfallStepContext):
+        step_context.values["categoria_produto"] = step_context.result
         return await step_context.prompt(
-            "numeroCartaoPrompt",
+            "QuantidadePrompt",
             PromptOptions(
-                prompt=MessageFactory.text("💳 Digite o número do cartão de crédito (15 ou 16 dígitos):"),
-                retry_prompt=MessageFactory.text("❌ Número do cartão inválido.")
+                prompt=MessageFactory.text("🔢 Digite a quantidade desejada:"),
+                retry_prompt=MessageFactory.text("❌ Quantidade inválida. Digite um número maior que 0."),
             )
         )
 
-    async def expiracao_step(self, step_context: WaterfallStepContext):
-        step_context.values["numero_cartao"] = step_context.result
+    async def quantidade_step(self, step_context: WaterfallStepContext):
+        step_context.values["quantidade"] = int(step_context.result)
+
+        # Buscar cartões
+        user_profile_accessor = self.user_state.create_property("UserProfile")
+        user_profile = await user_profile_accessor.get(step_context.context, UserProfile)
+
+        user_api = UserAPI()
+        cartoes = user_api.get_cartoes_by_cpf(user_profile.cpf)
+
+        buttons = [
+            CardAction(
+                type=ActionTypes.post_back,
+                title=f"Usar cartão {cartao['numero']}",
+                value=str(cartao["id"]),
+            ) for cartao in cartoes
+        ]
+
+        card = HeroCard(
+            title="💳 Selecione um cartão para usar:",
+            buttons=buttons
+        )
+
+        await step_context.context.send_activity(MessageFactory.attachment(CardFactory.hero_card(card)))
+
         return await step_context.prompt(
-            "expiracaoPrompt",
+            "CartaoIdPrompt",
             PromptOptions(
-                prompt=MessageFactory.text("📆 Digite a data de expiração do cartão (formato MM/AA):"),
-                retry_prompt=MessageFactory.text("❌ Data inválida. Use MM/AA.")
+                prompt=MessageFactory.text("Clique no botão do cartão selecionado"),
+                retry_prompt=MessageFactory.text("❌ ID inválido."),
             )
         )
 
     async def cvv_step(self, step_context: WaterfallStepContext):
-        step_context.values["data_expiracao"] = step_context.result
+        step_context.values["id_cartao"] = int(step_context.result)
         return await step_context.prompt(
             "cvvPrompt",
             PromptOptions(
-                prompt=MessageFactory.text("🔐 Digite o CVV (3 ou 4 dígitos):"),
-                retry_prompt=MessageFactory.text("❌ CVV inválido.")
+                prompt=MessageFactory.text("🔐 Digite o CVV do cartão selecionado:"),
+                retry_prompt=MessageFactory.text("❌ CVV inválido."),
+            )
+        )
+
+    async def escolher_endereco_step(self, step_context: WaterfallStepContext):
+        step_context.values["cvv"] = step_context.result
+
+        # Buscar endereços
+        user_profile_accessor = self.user_state.create_property("UserProfile")
+        user_profile = await user_profile_accessor.get(step_context.context, UserProfile)
+
+        user_api = UserAPI()
+        enderecos = user_api.get_enderecos_by_cpf(user_profile.cpf)
+
+        buttons = [
+            CardAction(
+                type=ActionTypes.post_back,
+                title=f"Usar endereço: {endereco['descricao']}",
+                value=str(endereco["id"]),
+            ) for endereco in enderecos
+        ]
+
+        card = HeroCard(
+            title="🏠 Selecione um endereço de entrega:",
+            buttons=buttons
+        )
+
+        await step_context.context.send_activity(MessageFactory.attachment(CardFactory.hero_card(card)))
+
+        return await step_context.prompt(
+            "EnderecoIdPrompt",
+            PromptOptions(
+                prompt=MessageFactory.text("Clique no botão do endereço selecionado"),
+                retry_prompt=MessageFactory.text("❌ ID inválido."),
             )
         )
 
     async def confirmar_pedido_step(self, step_context: WaterfallStepContext):
-        step_context.values["cvv"] = step_context.result
+        step_context.values["id_endereco"] = int(step_context.result)
 
-        # Monta dados para pedido
         pedido_api = PedidoAPI()
+
         pedido_data = {
-            "usuario": 1,  # ID do usuário fictício (substituir conforme necessário)
+            "usuario": step_context.values["usuario_id"],
             "produtos": [{
                 "id_produto": step_context.values["productId"],
-                "categoria_produto": "geral",  # você pode ajustar isso
-                "quantidade": 1
+                "categoria_produto": step_context.values["categoria_produto"],
+                "quantidade": step_context.values["quantidade"]
             }],
-            "id_cartao": 123,  # simulado
+            "id_cartao": step_context.values["id_cartao"],
             "cvv": step_context.values["cvv"],
-            "id_endereco": 456  # simulado
+            "id_endereco": step_context.values["id_endereco"]
         }
 
         response = pedido_api.post_pedidos(pedido_data)
@@ -126,9 +178,11 @@ class ComprarProdutoDialog(ComponentDialog):
             pedido_id = response.get("id", "desconhecido")
             await step_context.context.send_activity(
                 f"✅ Pedido criado com sucesso!\n\n"
-                f"📦 Produto: {step_context.values['productName']}\n"
                 f"📝 Número do pedido: {pedido_id}\n"
-                f"💳 Cartão final: {step_context.values['numero_cartao'][-4:]}"
+                f"📦 Produto: {step_context.values['productName']} (Qtd: {step_context.values['quantidade']})\n"
+                f"🪪 Usuário ID: {step_context.values['usuario_id']}\n"
+                f"💳 Cartão ID: {step_context.values['id_cartao']}\n"
+                f"🏠 Endereço ID: {step_context.values['id_endereco']}"
             )
 
         return await step_context.end_dialog()
