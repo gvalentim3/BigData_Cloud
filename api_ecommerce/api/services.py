@@ -99,9 +99,9 @@ class PedidoService():
         self.container = container
 
     def set_numero_pedido(self):
-        query = "SELECT TOP 1 VALUE c.order_number " \
+        query = "SELECT TOP 1 VALUE c.numero " \
         "FROM c " \
-        "ORDER BY c.order_number DESC"
+        "ORDER BY c.numero DESC"
         
         items = list(self.container.query_items(
             query=query,

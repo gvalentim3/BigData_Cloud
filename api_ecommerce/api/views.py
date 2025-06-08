@@ -689,3 +689,41 @@ class PedidoCreateView(APIView):
                 {"error": "Erro ao processar pedido", "details": str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+class PedidoSearchView(APIView):
+    container_pedidos = cosmos_db.containers["pedidos"]
+    def get(self, request, numero):
+        try:
+            if not numero.strip():
+                return Response(
+                    {"error": "O termo de busca não pode estar vazio"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            query = "SELECT TOP 1 * FROM c WHERE c.numero = @numero"
+
+            parameters = [
+                {"name": "@numero", "value": int(numero.strip())}
+            ]
+
+            pedido = list(self.container_pedidos.query_items(
+                query=query,
+                parameters=parameters,
+                enable_cross_partition_query=True
+            ))
+            
+            serializer = PedidoSerializer(pedido, many=True)
+
+            if not serializer.data:
+                return Response(
+                    {"message": "Nenhum pedido encontrado com o numero fornecido."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            return Response(serializer.data)
+        
+        except cosmos_exceptions.CosmosHttpResponseError as e:
+            return Response(
+                {"error": f"Erro no banco de dados: {str(e)}"},
+                status=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

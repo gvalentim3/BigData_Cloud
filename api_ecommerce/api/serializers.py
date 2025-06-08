@@ -160,7 +160,7 @@ class PedidoSerializer(serializers.Serializer):
         min_value=Decimal(0.01)
     )
     id_cartao = serializers.IntegerField()
-    cvv = serializers.CharField(max_length=3)
+    cvv = serializers.CharField(max_length=3, write_only=True)
     id_endereco = serializers.IntegerField()
     data = serializers.DateField(read_only=True)
 
@@ -204,6 +204,8 @@ class PedidoSerializer(serializers.Serializer):
             try:
                 produto = self.container_produtos.read_item(id_produto, partition_key=categoria_produto)
                 preco_produto = produto['preco']
+
+                produto_data['preco_produto'] = preco_produto
 
                 preco_total += qtd_produto * preco_produto
             
