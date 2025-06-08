@@ -706,20 +706,22 @@ class PedidoSearchView(APIView):
                 {"name": "@numero", "value": int(numero.strip())}
             ]
 
-            pedido = list(self.container_pedidos.query_items(
-                query=query,
-                parameters=parameters,
-                enable_cross_partition_query=True
-            ))
+            pedido = next(
+                self.container_pedidos.query_items(
+                    query=query,
+                    parameters=parameters,
+                    enable_cross_partition_query=True
+                ),
+                None
+            )
             
-            serializer = PedidoSerializer(pedido, many=True)
-
-            if not serializer.data:
+            if not pedido:
                 return Response(
                     {"message": "Nenhum pedido encontrado com o numero fornecido."},
                     status=status.HTTP_404_NOT_FOUND
                 )
-
+            
+            serializer = PedidoSerializer(pedido)
             return Response(serializer.data)
         
         except cosmos_exceptions.CosmosHttpResponseError as e:
