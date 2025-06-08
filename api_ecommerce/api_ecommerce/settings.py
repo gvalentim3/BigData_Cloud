@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
-    'api_ecommerce.api.apps.ApiConfig',  # API app
+    'api.apps.ApiConfig',  # API app
     'drf_yasg',  # Swagger
 ]
 
@@ -68,7 +68,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ROOT_URLCONF = 'api_ecommerce.api_ecommerce.urls'
+ROOT_URLCONF = 'api_ecommerce.urls'
 
 TEMPLATES = [
     {
@@ -86,15 +86,15 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'api_ecommerce.api_ecommerce.wsgi.application'
+WSGI_APPLICATION = 'api_ecommerce.wsgi.application'
 
 CORS_ALLOWED_ORIGINS = [
     "https://projeto-ibmec-cloud-9016-2025-f8hhfgetc3g3a2fg.centralus-01.azurewebsites.net",
     "http://localhost:8000",
 ]
 
-#SECURE_SSL_REDIRECT = True
-#SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 
 # Database
@@ -109,6 +109,10 @@ DATABASES = {
         'HOST': os.getenv("SQL_SERVER"),  # Replace with your database host
         'PORT': os.getenv("SQL_PORT"),  # Replace with your database port
         'OPTIONS': {
+            'ssl': {
+                'ca': os.path.join(BASE_DIR, 'DigiCertGlobalRootCA.crt.pem'),
+                'ssl_mode': 'REQUIRED'  # Force SSL
+            },
             'charset': 'utf8mb4'
         }
 

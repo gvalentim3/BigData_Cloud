@@ -13,45 +13,20 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read #This is required for actions/checkout
-
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Create and activate virtual environment
-        working-directory: .
+      - name: Prepare deployment artifact
         run: |
-          python -m venv venv
-          source venv/bin/activate
-          pip install --upgrade pip
-          pip install -r requirements.txt
-      
-      - name: Install dependencies
-        working-directory: .
-        run: |
-          # Install pip requirements
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          mkdir -p deploy_artifact
+          cp -r api_ecommerce/ startup.sh deploy_artifact/
+          cd deploy_artifact && zip -r ../release.zip .
 
-          
-      # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
-
-      - name: Zip artifact for deployment
-        run: zip release.zip ./* -r
-
-      - name: Upload artifact for deployment jobs
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: python-app
-          path: |
-            release.zip
-            !venv/
+          name: deployment-package
+          path: release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -59,30 +34,26 @@ jobs:
     environment:
       name: 'Production'
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
-    permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
 
     steps:
-      - name: Download artifact from build job
+      - name: Download artifact
         uses: actions/download-artifact@v4
         with:
-          name: python-app
+          name: deployment-package
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
-      
-      - name: Login to Azure
+      - name: Unzip package
+        run: unzip release.zip -d deployment_files
+
+      - name: Azure Login
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7582FD73248A492D930721D6725ECE67 }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_FC2F2E2B03A746508AFF8188371A3B46 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8527CF6D06224F56B84822E313B7D88F }}
+              client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_7582FD73248A492D930721D6725ECE67 }}
+              tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_FC2F2E2B03A746508AFF8188371A3B46 }}
+              subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_8527CF6D06224F56B84822E313B7D88F }}
 
-      - name: 'Deploy to Azure Web App'
+      - name: Deploy to WebApp
         uses: azure/webapps-deploy@v3
-        id: deploy-to-webapp
         with:
           app-name: 'projeto-ibmec-cloud-9016-2025'
-          slot-name: 'Production'
+          package: deployment_files
           
