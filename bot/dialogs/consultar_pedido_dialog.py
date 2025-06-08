@@ -1,7 +1,6 @@
 from botbuilder.dialogs import ComponentDialog, WaterfallDialog, WaterfallStepContext
 from botbuilder.core import MessageFactory
-from botbuilder.dialogs.prompts import TextPrompt, PromptOptions, ChoicePrompt
-from botbuilder.dialogs.choices import Choice
+from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
 from botbuilder.core import UserState
 from botbuilder.schema import HeroCard, CardAction, ActionTypes
 from botbuilder.core import CardFactory
@@ -14,7 +13,7 @@ class ConsultarPedidoDialog(ComponentDialog):
         self.user_state = user_state
 
         self.add_dialog(TextPrompt(TextPrompt.__name__, self.pedido_id_validator))
-        self.add_dialog(ChoicePrompt(ChoicePrompt.__name__))
+        self.add_dialog(TextPrompt("ChoicePromptText"))  # substitui o ChoicePrompt pelo TextPrompt
 
         self.add_dialog(
             WaterfallDialog(
@@ -70,30 +69,35 @@ class ConsultarPedidoDialog(ComponentDialog):
         else:
             await step_context.context.send_activity(self.criar_card_pedido(response))
 
+        # Substituindo o ChoicePrompt por HeroCard com botões
+        card = HeroCard(
+            title="📋 O que você gostaria de fazer agora?",
+            buttons=[
+                CardAction(type=ActionTypes.post_back, title="Consultar outro pedido", value="consultar_outro"),
+                CardAction(type=ActionTypes.post_back, title="Voltar ao menu principal", value="voltar_menu"),
+            ],
+        )
+        await step_context.context.send_activity(MessageFactory.attachment(CardFactory.hero_card(card)))
+
         return await step_context.prompt(
-            ChoicePrompt.__name__,
+            "ChoicePromptText",
             PromptOptions(
-                prompt=MessageFactory.text("📋 O que você gostaria de fazer agora?"),
-                choices=[
-                    Choice("Consultar outro pedido"),
-                    Choice("Voltar ao menu principal"),
-                ],
+                prompt=MessageFactory.text("Clique em uma opção acima ou digite sua escolha:"),
+                retry_prompt=MessageFactory.text("❌ Opção inválida. Digite 'consultar_outro' ou 'voltar_menu'."),
             ),
         )
 
     async def next_action_step(self, step_context: WaterfallStepContext):
-        option = step_context.result.value
+        option = step_context.result.lower()
 
-        if option == "Consultar outro pedido":
+        if option == "consultar_outro":
             await step_context.context.send_activity("🔄 Ok! Vamos consultar outro pedido.")
             return await step_context.replace_dialog(self.initial_dialog_id)
 
-        elif option == "Voltar ao menu principal":
+        elif option == "voltar_menu":
             await step_context.context.send_activity("🏠 Voltando ao menu principal...")
             return await step_context.replace_dialog("MainDialog")
 
         # Fallback para entrada inesperada
         await step_context.context.send_activity("🤔 Não entendi sua escolha. Voltando ao menu principal.")
         return await step_context.replace_dialog("MainDialog")
-
-

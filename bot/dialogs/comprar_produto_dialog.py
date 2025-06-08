@@ -6,6 +6,7 @@ from botbuilder.core import CardFactory
 from api.pedido_api import PedidoAPI
 from api.user_api import UserAPI
 from data_models.user_profile import UserProfile
+import re
 
 class ComprarProdutoDialog(ComponentDialog):
     def __init__(self, user_state: UserState):
@@ -175,7 +176,14 @@ class ComprarProdutoDialog(ComponentDialog):
         if "error" in response:
             await step_context.context.send_activity(f"❌ Erro ao criar pedido: {response['error']}")
         else:
-            pedido_id = response.get("id", "desconhecido")
+            # Tenta extrair o número do pedido da string de "success"
+            success_msg = response.get("success", "")
+            match = re.search(r"Pedido #(\d+)", success_msg)
+            if match:
+                pedido_id = match.group(1)
+            else:
+                pedido_id = "desconhecido"
+
             await step_context.context.send_activity(
                 f"✅ Pedido criado com sucesso!\n\n"
                 f"📝 Número do pedido: {pedido_id}\n"

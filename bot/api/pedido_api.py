@@ -67,7 +67,7 @@ class PedidoAPI:
                 }
         """
         try:
-            url = f"{self.base_url}/{pedido_id}"
+            url = f"{self.base_url}{pedido_id}"
             response = requests.get(url)
             response.raise_for_status()
             
