@@ -151,7 +151,24 @@ class UsuarioReadUpdateDeleteView(APIView):
             )
         usuario.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+class UsuarioCPFSearch(APIView):
+    def get(self, request, cpf):
+        try:
+            usuario, error = UsuarioService.busca_por_cpf(cpf)
 
+            if error:
+                return Response(error, status=status.HTTP_404_NOT_FOUND)
+            
+            # CORREÇÃO: Mudar para HTTP_200_OK quando o usuário é encontrado
+            return Response({"id_usuario": usuario.id}, status=status.HTTP_200_OK)
+        
+        except Exception as e:
+            # Adicione este print para debug (remova depois)
+            print(f"Erro interno: {str(e)}")  
+            return Response(
+                {"error": "Ocorreu um erro interno no servidor"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class EnderecoCreateListView(APIView):
     def __init__(self, *args, **kwargs):

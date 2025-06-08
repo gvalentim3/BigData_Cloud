@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import (ExtratoCartaoView, PedidoSearchView, ProdutoSearchView, UsuarioReadUpdateDeleteView, UsuarioCreateListView, 
+from .views import (ExtratoCartaoView, PedidoSearchView, ProdutoSearchView, UsuarioCPFSearch, UsuarioReadUpdateDeleteView, UsuarioCreateListView, 
                     CartaoCreateListView, CartaoUpdateDeleteView, EnderecoCreateListView, 
                     EnderecoUpdateDeleteView, ProdutoReadUpdateDeleteView, ProdutoCreateListView,
                     PedidoCreateView)
@@ -9,6 +9,7 @@ urlpatterns = [
     path('usuarios/', include([
         path('', UsuarioCreateListView.as_view(), name='users-list-create'),
         path('<int:id_usuario>/', UsuarioReadUpdateDeleteView.as_view(), name='users-detail'),
+        path('<str:cpf>', UsuarioCPFSearch.as_view(), name='user-cpf-search'),
         
         path('<int:id_usuario>/enderecos/', include([
             path('', EnderecoCreateListView.as_view(), name='user-addresses-list'),
