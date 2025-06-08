@@ -5,13 +5,7 @@ from botbuilder.schema import Attachment
 
 
 class UserProfile:
-    """
-      This is our application state. Just a regular serializable Python class.
-    """
-
-    def __init__(self, name: str = None, cpf: str = None, transport: str = None, age: int = 0, picture: Attachment = None):
-        self.name = name
+    def __init__(self, name: str = None, cpf: str = None, id_usuario: int = None):
+        self.nome = name
         self.cpf = cpf
-        self.transport = transport
-        self.age = age
-        self.picture = picture
+        self.id_usuario = id_usuario
