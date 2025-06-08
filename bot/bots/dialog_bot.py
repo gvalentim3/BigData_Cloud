@@ -1,9 +1,13 @@
-from botbuilder.core import ActivityHandler, ConversationState, TurnContext, UserState, MessageFactory
-from botbuilder.dialogs import Dialog
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+
+from botbuilder.core import ActivityHandler, ConversationState, TurnContext, UserState
+from botbuilder.dialogs import Dialog, DialogContext, DialogSet
 from helpers.dialog_helper import DialogHelper
 
 
 class DialogBot(ActivityHandler):
+
     def __init__(
         self,
         conversation_state: ConversationState,
@@ -27,24 +31,48 @@ class DialogBot(ActivityHandler):
 
     async def on_turn(self, turn_context: TurnContext):
         await super().on_turn(turn_context)
-
-        # Save any state changes that might have ocurred during the turn.
         await self.conversation_state.save_changes(turn_context)
         await self.user_state.save_changes(turn_context)
 
     async def on_message_activity(self, turn_context: TurnContext):
+        # Verifica se é uma ação de botão do tipo "comprar"
+        if turn_context.activity.value and "acao" in turn_context.activity.value:
+            acao = turn_context.activity.value["acao"]
+
+            if acao == "comprar":
+                product_id = turn_context.activity.value["productId"]
+                product_name = turn_context.activity.value["productName"]
+
+                # Cria um conjunto de diálogos com o estado da conversa
+                dialog_state = self.conversation_state.create_property("DialogState")
+                dialog_set = DialogSet(dialog_state)
+                dialog_set.add(self.dialog)  # Adiciona o diálogo principal que inclui todos os filhos
+
+                dialog_context: DialogContext = await dialog_set.create_context(turn_context)
+
+                # Inicia o diálogo de compra com os dados do produto
+                return await dialog_context.begin_dialog(
+                    "MainDialog",
+                    {
+                        "acao": "comprar",
+                        "productId": product_id,
+                        "productName": product_name
+                    }
+                )
+
+
+        # Se não for uma ação de botão, segue o fluxo padrão
         await DialogHelper.run_dialog(
             self.dialog,
             turn_context,
             self.conversation_state.create_property("DialogState"),
         )
 
+
     async def on_members_added_activity(self, members_added, turn_context: TurnContext):
         for member in members_added:
-            if member.id == turn_context.activity.recipient.id:
+            if member.id != turn_context.activity.recipient.id:
                 await turn_context.send_activity(
-                    MessageFactory.text(
                     f"Seja bem-vindo(a) ao bot de atendimento do IBMEC MALL! " 
                     f"Digite uma mensagem para iniciar o atendimento."
-                    )
                 )
