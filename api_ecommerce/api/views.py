@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .serializers import (UsuarioReadSerializer, UsuarioCreateSerializer, CartaoReadSerializer, 
+from .serializers import (ExtratoRequestSerializer, ExtratoResponseSerializer, UsuarioReadSerializer, UsuarioCreateSerializer, CartaoReadSerializer, 
                              CartaoWriteSerializer, EnderecoReadSerializer, EnderecoWriteSerializer, 
                             ProdutoSerializer, PedidoSerializer)
 from .apps import cosmos_db
@@ -8,11 +8,7 @@ from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from .models import Usuario, Endereco, CartaoCredito, Produto
 from rest_framework import status
-from django.utils import timezone
-import uuid
-from django.conf import settings
 from azure.cosmos import exceptions as cosmos_exceptions
-from rest_framework.request import Request
 from .services import PedidoService, ProdutoService, TransacaoService, UsuarioService, CartaoService, EnderecoService
 
 
@@ -366,7 +362,6 @@ class CartaoUpdateDeleteView(APIView):
 
         cartao.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
 
 class ProdutoCreateListView(APIView):
     container = cosmos_db.containers["produtos"]
@@ -625,7 +620,7 @@ class PedidoCreateView(APIView):
     def post(self, request):
         """
         {
-            id_usuario = int,
+            usuario = int,
             produtos = [
                 {
                     id_produto =
@@ -648,7 +643,9 @@ class PedidoCreateView(APIView):
                             "details": serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
         
-        validated_data = serializer.validated_data
+        cvv = serializer.cvv  # Acessa o CVV que foi removido
+        validated_data = serializer.validated_data  # Dados sem CVV
+
 
         try:
             cartao_informado = CartaoCredito.objects.get(id=validated_data['id_cartao'])
@@ -656,7 +653,7 @@ class PedidoCreateView(APIView):
             transacao_response = TransacaoService().autoriza_transacao(
                                                 cartao=cartao_informado, 
                                                 valor=validated_data['preco_total'],
-                                                cvv_request=request.data['cvv'])
+                                                cvv_request=cvv)
             
             if transacao_response.status_code == status.HTTP_400_BAD_REQUEST:
                 return transacao_response
@@ -674,7 +671,7 @@ class PedidoCreateView(APIView):
 
             dados_pedido = {**serializer.validated_data, 'numero': numero_pedido}
 
-            pedido_criado = self.container_pedidos.create_item(
+            self.container_pedidos.create_item(
                 body=dados_pedido,
                 enable_automatic_id_generation=True
             )
@@ -727,3 +724,74 @@ class PedidoSearchView(APIView):
                 {"error": f"Erro no banco de dados: {str(e)}"},
                 status=e.status_code or status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+        
+class ExtratoCartaoView(APIView):
+    container_pedidos = cosmos_db.containers["pedidos"]
+    
+    @swagger_auto_schema(
+        manual_parameters=[
+            openapi.Parameter('usuario', openapi.IN_PATH, type=openapi.TYPE_INTEGER),
+            openapi.Parameter('cartao', openapi.IN_PATH, type=openapi.TYPE_INTEGER),
+            openapi.Parameter('ano_mes', openapi.IN_PATH, type=openapi.TYPE_STRING)
+        ],
+        responses={
+            200: ExtratoResponseSerializer(many=True),
+            400: "Dados inválidos",
+            404: "Usuário/Cartão não encontrado"
+        }
+    )
+    def get(self, request, usuario, cartao, ano_mes):
+        try:
+            ano, mes = map(int, ano_mes.split('-'))
+        except ValueError:
+            return Response(
+                {"error": "Formato de ano_mes inválido. Use YYYY-MM."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        data = {
+            'usuario': usuario,
+            'cartao': cartao,
+            'ano': ano,
+            'mes': mes
+        }
+
+        serializer = ExtratoRequestSerializer(data=data)
+
+        if not serializer.is_valid():
+            return Response({"errors": "Dados inválidos",
+                            "details": serializer.errors},
+                            status=status.HTTP_400_BAD_REQUEST)
+        
+        validated_data = serializer.validated_data
+
+        query = "SELECT * FROM c WHERE c.id_cartao = @cartao AND STARTSWITH(c.data, @ano_mes)"
+
+        parameters = [
+            {"name": "@cartao", "value": validated_data['cartao']},
+            {"name": "@ano_mes", "value": validated_data['ano_mes']}
+        ]
+
+        pedidos = list(self.container_pedidos.query_items(
+            query=query,
+            parameters=parameters,
+            enable_cross_partition_query=True
+        ))
+
+        if not pedidos:
+            return Response({
+                "message": "Nenhum pedido encontrado para o cartão no período especificado",
+                "cartao": validated_data['cartao'],
+                "ano_mes": validated_data['ano_mes']
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        pedidos_serializados = ExtratoResponseSerializer(pedidos, many=True).data
+
+        response_data = {
+            "cartao": validated_data['cartao'],
+            "ano_mes": validated_data['ano_mes'],
+            "quantidade_pedidos": len(pedidos),
+            "pedidos": pedidos_serializados
+        }
+
+        return Response(response_data, status=status.HTTP_200_OK)

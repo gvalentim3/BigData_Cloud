@@ -110,9 +110,9 @@ class PedidoService():
         
         return items[0] + 1 if items else 1000
     
-    def busca_cartao_pelo_numero(numero_cartao, id_usuario):
+    def busca_cartao_pelo_numero(numero_cartao, usuario):
         cartao = CartaoCredito.objects.filter(
-            usuario_id=id_usuario,
+            usuario_id=usuario,
             numero=numero_cartao,
         ).first()
         
