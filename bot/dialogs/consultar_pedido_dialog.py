@@ -44,15 +44,16 @@ class ConsultarPedidoDialog(ComponentDialog):
     
     def criar_card_pedido(self, pedido):
         produtos_text = "\n".join(
-            f"- {p['nome_produto']} (Qtd: {p['quantidade']}, Preço unit.: R$ {p['preco_unitario']:.2f})"
-            for p in pedido.get("produtos", [])
+            f"- {p['nome_produto']} (Qtd: {p['quantidade']}, Preço unit.: R$ {float(p['preco_produto']):.2f})"
+            for p in pedido[0].get("produtos", [])
         )
-
+        total = float(pedido[0].get('preco_total', '0.0'))
+        
         card = CardFactory.hero_card(
             HeroCard(
-                title=f"Pedido #{pedido['id']}",
-                subtitle=f"Status: {pedido.get('status', 'Desconhecido')} | Data: {pedido.get('data_pedido', 'Desconhecida')}",
-                text=f"🧾 Valor Total: R$ {pedido.get('valor_total', 0.0):.2f}\n\n📦 Produtos:\n{produtos_text}"
+                title=f"Pedido #{pedido[0]['numero']}",
+                subtitle=f"Data: {pedido[0].get('data', 'Desconhecida')}",
+                text=f"🧾 Valor Total: R$ {total:.2f}\n\n📦 Produtos:\n{produtos_text}"
             )
         )
         return MessageFactory.attachment(card)
@@ -62,6 +63,7 @@ class ConsultarPedidoDialog(ComponentDialog):
 
         pedido_api = PedidoAPI()
         response = pedido_api.search_pedido(pedido_id)
+        print(response)
 
         if "error" in response:
             await step_context.context.send_activity(f"⚠️ {response['error']}")
