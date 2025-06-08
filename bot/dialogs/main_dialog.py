@@ -1,5 +1,3 @@
-from botbuilder.core import CardFactory
-
 from botbuilder.dialogs import (
     ComponentDialog,
     WaterfallDialog,
@@ -7,26 +5,16 @@ from botbuilder.dialogs import (
     DialogTurnResult,
 )
 from botbuilder.dialogs.prompts import (
-    TextPrompt,
-    NumberPrompt,
     ChoicePrompt,
-    ConfirmPrompt,
-    AttachmentPrompt,
     PromptOptions,
-    PromptValidatorContext,
-)
-from botbuilder.schema import (
-    ActionTypes,
-    HeroCard,
-    CardAction,
-    CardImage,
 )
 from botbuilder.dialogs.choices import Choice
 from botbuilder.core import MessageFactory, UserState
-from api.product_api import ProductAPI
+
+from dialogs.consultar_produtos_dialog import ConsultarProdutosDialog
 from dialogs.consultar_pedido_dialog import ConsultarPedidoDialog
-from dialogs.consultar_produtos_dialog import ConsultarProdutoDialog
 from dialogs.extrato_compra_dialog import ExtratoCompraDialog
+from dialogs.comprar_produto_dialog import ComprarProdutoDialog
 
 
 class MainDialog(ComponentDialog):
@@ -35,24 +23,19 @@ class MainDialog(ComponentDialog):
 
         self.user_state = user_state
 
-        #Prompt para escolha das opções
+        # Diálogos filhos
+        self.add_dialog(ConsultarProdutosDialog(user_state))
+        self.add_dialog(ConsultarPedidoDialog(user_state))
+        self.add_dialog(ExtratoCompraDialog(user_state))
+        self.add_dialog(ComprarProdutoDialog(user_state))
+
+        # Prompts
         self.add_dialog(ChoicePrompt(ChoicePrompt.__name__))
-        self.add_dialog(ConfirmPrompt(ConfirmPrompt.__name__))
 
-        #Area de atendimento de consultar pedidos  
-        self.add_dialog(ConsultarPedidoDialog())
-
-        #Area de atendimento de consultar produtos
-        self.add_dialog(ConsultarProdutoDialog())
-        
-        #Area de atendimento de extrato de compras
-        self.add_dialog(ExtratoCompraDialog())
-
-        # Prompt para escolha de opções
-        # Tratamento das opções de escolha do usuário
+        # Waterfall
         self.add_dialog(
             WaterfallDialog(
-                "MainDialog",
+                "mainWaterfallDialog",
                 [
                     self.prompt_option_step,
                     self.process_option_step,
@@ -60,56 +43,64 @@ class MainDialog(ComponentDialog):
             )
         )
 
-
-        self.initial_dialog_id = "MainDialog"
+        self.initial_dialog_id = "mainWaterfallDialog"
 
     async def prompt_option_step(
         self, step_context: WaterfallStepContext
     ) -> DialogTurnResult:
+
+        # Se o diálogo foi iniciado com dados da compra, redireciona diretamente
+        if isinstance(step_context.options, dict):
+            acao = step_context.options.get("acao")
+            if acao == "comprar":
+                return await step_context.begin_dialog(
+                    "ComprarProdutoDialog",
+                    {
+                        "productId": step_context.options["productId"],
+                        "productName": step_context.options["productName"],
+                    },
+                )
+            elif acao == "voltar_menu":
+                # Apenas cai no menu sem fazer nada
+                await step_context.context.send_activity("🏠 Voltando ao menu principal...")
+
+        # Caso contrário, mostra o menu principal
         return await step_context.prompt(
             ChoicePrompt.__name__,
             PromptOptions(
                 prompt=MessageFactory.text("Escolha a opção desejada:"),
-                choices=[Choice("Consultar Pedidos"), Choice("Consultar Produtos"), Choice("Extrato de Compras")],
+                choices=[
+                    Choice("Consultar Produtos"),
+                    Choice("Consultar Pedidos"),
+                    Choice("Extrato de Compras"),
+                ],
             ),
         )
 
     async def process_option_step(
         self, step_context: WaterfallStepContext
     ) -> DialogTurnResult:
-        
-        choice = step_context.result.value
-        
-        if choice == "Consultar Pedidos":
+
+        option = ""
+
+        # Proteção contra None
+        if step_context.result is not None:
+            if hasattr(step_context.result, "value"):
+                option = step_context.result.value.lower()
+            elif isinstance(step_context.result, str):
+                option = step_context.result.lower()
+        else:
+            await step_context.context.send_activity("Opção inválida. Retornando ao menu principal.")
+            return await step_context.replace_dialog(self.initial_dialog_id)
+
+        # Navegação
+        if option == "consultar produtos":
+            return await step_context.begin_dialog("ConsultarProdutosDialog")
+        elif option == "consultar pedidos":
             return await step_context.begin_dialog("ConsultarPedidoDialog")
-        elif choice == "Consultar Produtos":
-            return await step_context.begin_dialog("ConsultarProdutoDialog")
-        elif choice == "Extrato de Compras":
+        elif option == "extrato de compras":
             return await step_context.begin_dialog("ExtratoCompraDialog")
-        
-        return await step_context.end_dialog()
-    
-    async def show_card_produto(self ,turn_context):
-        
-        produto_api = ProductAPI()
 
-        response = produto_api.consultar_api()
-        print(response)
-
-        #Chamada de API para obter os produtos
-        card = CardFactory.hero_card(
-            HeroCard(
-                title=response["productName"],
-                text=f"Preço: R$ {response['price']}",
-                subtitle=response["productDescription"],
-                images=[CardImage(url=response["imageUrl"][0])],
-                buttons=[
-                    CardAction(
-                        type=ActionTypes.im_back,
-                        title="Comprar Produto",
-                        value=response["id"],
-                    ),
-                ],
-            )
-        )
-        await turn_context.send_activity(MessageFactory.attachment(card))
+        # fallback — não deveria acontecer
+        await step_context.context.send_activity("Opção não reconhecida. Retornando ao menu principal.")
+        return await step_context.replace_dialog(self.initial_dialog_id)
