@@ -66,6 +66,13 @@ class UsuarioService():
             except:
                 continue
 
+    def busca_por_cpf(cpf):
+        try:
+            usuario = Usuario.objects.get(cpf=cpf)
+            return usuario, None
+        except Usuario.DoesNotExist:
+            return None, {"error": "Usuário não encontrado"}
+
 class ProdutoService():
     def __init__(self, container):
         self.container = container
