@@ -1,9 +1,26 @@
 import requests
+from config import DefaultConfig
+
 class ProductAPI:
-    def consultar_produtos(self, product_name):
+    def __init__(self):
+        self.config = DefaultConfig()
+        self.base_url = f"{self.config.URL_PREFIX}/api/produtos"
+
+    def get_products(self):
         try:
-            response = requests.get("http://localhost:8080/products/search", params={"productName": product_name})
-            if (response.status_code == 200):
-                return response.json()
+            response = requests.get(self.base_url)
+            response.raise_for_status()
+            return response.json()
         except Exception as e:
-            print(f"Não consegui consultar a API de Consulta de Produtos {e}")
+            print(f"[GET_PRODUCTS] API Error: {e}")
+            return {"error": "Falha na conexão ou status inválido"}
+
+    def search_product(self, product_name):
+        try:
+            url = f"{self.base_url}/busca/{product_name}"
+            response = requests.get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"[SEARCH_PRODUCT] API Error: {e}")
+            return {"error": "Falha na conexão ou status inválido"}

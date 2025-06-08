@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd api_ecommerce
+
 # Install dependencies
 pip install -r requirements.txt
 
@@ -10,4 +12,4 @@ python manage.py collectstatic --noinput
 python manage.py migrate
 
 # Start the application
-gunicorn api_ecommerce.api_ecommerce.wsgi:application --bind 0.0.0.0:8000 
+gunicorn api_ecommerce.wsgi:application --bind 0.0.0.0:8000 

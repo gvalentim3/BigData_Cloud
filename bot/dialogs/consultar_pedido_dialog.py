@@ -1,38 +1,99 @@
 from botbuilder.dialogs import ComponentDialog, WaterfallDialog, WaterfallStepContext
 from botbuilder.core import MessageFactory
-from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
+from botbuilder.dialogs.prompts import TextPrompt, PromptOptions, ChoicePrompt
+from botbuilder.dialogs.choices import Choice
+from botbuilder.core import UserState
+from botbuilder.schema import HeroCard, CardAction, ActionTypes
+from botbuilder.core import CardFactory
+from api.pedido_api import PedidoAPI
 
 class ConsultarPedidoDialog(ComponentDialog):
-    def __init__(self):
+    def __init__(self, user_state: UserState):
         super(ConsultarPedidoDialog, self).__init__("ConsultarPedidoDialog")
 
-        self.add_dialog(TextPrompt("namePrompt"))
+        self.user_state = user_state
+
+        self.add_dialog(TextPrompt(TextPrompt.__name__, self.pedido_id_validator))
+        self.add_dialog(ChoicePrompt(ChoicePrompt.__name__))
 
         self.add_dialog(
             WaterfallDialog(
                 "consultarPedidoWaterfallDialog",
                 [
-                    self.prompt_option_step,
-                    self.prompt_process_product_name_step,
-
+                    self.prompt_pedido_id_step,
+                    self.consultar_pedido_step,
+                    self.next_action_step,
                 ],
             )
         )
 
         self.initial_dialog_id = "consultarPedidoWaterfallDialog"
 
-    async def prompt_option_step(self, step_context: WaterfallStepContext) :
-                
-        prompt_message = MessageFactory.text("Por favor, digite o nome do produto que você deseja consultar.")
-        
+    async def pedido_id_validator(self, prompt_context):
+        # Garante que seja um número positivo
+        return prompt_context.recognized.succeeded and prompt_context.recognized.value.isdigit()
+
+    async def prompt_pedido_id_step(self, step_context: WaterfallStepContext):
         return await step_context.prompt(
-            "namePrompt",
-            PromptOptions(prompt=MessageFactory.text("Digite seu nome:"))
+            TextPrompt.__name__,
+            PromptOptions(
+                prompt=MessageFactory.text("📦 Por favor, digite o número do pedido que deseja consultar:"),
+                retry_prompt=MessageFactory.text("❌ Número inválido. Digite apenas números, por favor."),
+            )
         )
     
-    async def prompt_process_product_name_step(self, step_context: WaterfallStepContext) :
-        product_name = step_context.result
-        # Aqui você pode adicionar a lógica para consultar o produto usando o nome fornecido
-        return await step_context.end_dialog()
-    
+    def criar_card_pedido(self, pedido: dict):
+        produtos_text = "\n".join(
+            f"- {p['nome_produto']} (Qtd: {p['quantidade']}, Preço unit.: R$ {float(p['preco_produto']):.2f})"
+            for p in pedido.get("produtos", [])
+        )
+        total = float(pedido.get('preco_total', '0.0'))
+        
+        card = CardFactory.hero_card(
+            HeroCard(
+                title=f"Pedido #{pedido['numero']}",
+                subtitle=f"Data: {pedido.get('data', 'Desconhecida')}",
+                text=f"🧾 Valor Total: R$ {total:.2f}\n\n📦 Produtos:\n{produtos_text}"
+            )
+        )
+        return MessageFactory.attachment(card)
+
+    async def consultar_pedido_step(self, step_context: WaterfallStepContext):
+        pedido_id = step_context.result
+
+        pedido_api = PedidoAPI()
+        response = pedido_api.search_pedido(pedido_id)
+        print(response)
+
+        if "error" in response:
+            await step_context.context.send_activity(f"⚠️ {response['error']}")
+        else:
+            await step_context.context.send_activity(self.criar_card_pedido(response))
+
+        return await step_context.prompt(
+            ChoicePrompt.__name__,
+            PromptOptions(
+                prompt=MessageFactory.text("📋 O que você gostaria de fazer agora?"),
+                choices=[
+                    Choice("Consultar outro pedido"),
+                    Choice("Voltar ao menu principal"),
+                ],
+            ),
+        )
+
+    async def next_action_step(self, step_context: WaterfallStepContext):
+        option = step_context.result.value
+
+        if option == "Consultar outro pedido":
+            await step_context.context.send_activity("🔄 Ok! Vamos consultar outro pedido.")
+            return await step_context.replace_dialog(self.initial_dialog_id)
+
+        elif option == "Voltar ao menu principal":
+            await step_context.context.send_activity("🏠 Voltando ao menu principal...")
+            return await step_context.replace_dialog("MainDialog")
+
+        # Fallback para entrada inesperada
+        await step_context.context.send_activity("🤔 Não entendi sua escolha. Voltando ao menu principal.")
+        return await step_context.replace_dialog("MainDialog")
+
 

@@ -46,7 +46,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'corsheaders',
     'rest_framework',
-    'api_ecommerce.api.apps.ApiConfig',  # API app
+    'api.apps.ApiConfig',  # API app
     'drf_yasg',  # Swagger
 ]
 
@@ -68,7 +68,7 @@ STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-ROOT_URLCONF = 'api_ecommerce.api_ecommerce.urls'
+ROOT_URLCONF = 'api_ecommerce.urls'
 
 TEMPLATES = [
     {
@@ -113,7 +113,7 @@ DATABASES = {
                 'ca': os.path.join(BASE_DIR, 'DigiCertGlobalRootCA.crt.pem'),
                 'ssl_mode': 'REQUIRED'  # Force SSL
             },
-            'charset': 'utf8mb4',
+            'charset': 'utf8mb4'
         }
 
     }
@@ -172,9 +172,5 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-MIGRATION_MODULES = {
-    # Desabilita criação de tabelas default na DB relacional.
-    'api': None,        
-}
 
 #migration

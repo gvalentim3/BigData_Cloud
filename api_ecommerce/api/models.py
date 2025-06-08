@@ -16,12 +16,6 @@ class Usuario (models.Model):
     class Meta:
         db_table = 'usuario'
     
-class TipoEndereco(models.Model):
-    tipo = models.CharField(max_length=45)
-
-    class Meta:
-        db_table = 'tipo_endereco'
-
 class Endereco (models.Model):
     logradouro = models.CharField(max_length=200, null=False, blank=False)
     complemento = models.CharField(max_length=200, null=False, blank=True, default="")
@@ -29,8 +23,10 @@ class Endereco (models.Model):
     cidade = models.CharField(max_length=100, null=False, blank=False)
     estado = models.CharField(max_length=100, null=False, blank=False)
     cep = models.CharField(max_length=8, null=False, blank=False)
-    FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
-    FK_tp_endereco = models.ForeignKey(TipoEndereco, on_delete=models.CASCADE, related_name="enderecos")
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="enderecos")
+
+    def __str__(self):
+        return self.logradouro
 
     class Meta:
         db_table = 'endereco'
@@ -40,7 +36,10 @@ class CartaoCredito (models.Model):
     dt_expiracao = models.DateField(null=False, blank=False)
     cvv = models.CharField(max_length=3, null=False, blank=False)
     saldo = models.DecimalField(max_digits=10 ,decimal_places=2, null=False, blank=False)
-    FK_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name="cartoes")
+
+    def __str__(self):
+        return self.numero
 
     class Meta:
         db_table = 'cartao_credito'
