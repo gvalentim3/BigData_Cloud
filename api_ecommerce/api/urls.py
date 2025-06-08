@@ -1,5 +1,5 @@
 from django.urls import path, include
-from .views import (PedidoSearchView, ProdutoSearchView, UsuarioReadUpdateDeleteView, UsuarioCreateListView, 
+from .views import (ExtratoCartaoView, PedidoSearchView, ProdutoSearchView, UsuarioReadUpdateDeleteView, UsuarioCreateListView, 
                     CartaoCreateListView, CartaoUpdateDeleteView, EnderecoCreateListView, 
                     EnderecoUpdateDeleteView, ProdutoReadUpdateDeleteView, ProdutoCreateListView,
                     PedidoCreateView)
@@ -29,6 +29,8 @@ urlpatterns = [
 
     path('pedidos/', include([
         path('', PedidoCreateView.as_view(), name='pedido-create'),
-        path('<str:numero>', PedidoSearchView.as_view(), name='pedido-search')
+        path('<str:numero>', PedidoSearchView.as_view(), name='products-search')
     ])),
+
+    path('extrato/<int:usuario>/<int:cartao>/<str:ano_mes>/', ExtratoCartaoView.as_view(), name='get-extrato-cartao')
 ]
