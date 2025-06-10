@@ -42,6 +42,8 @@ class DialogBot(ActivityHandler):
             if acao == "comprar":
                 product_id = turn_context.activity.value["productId"]
                 product_name = turn_context.activity.value["productName"]
+                product_category = turn_context.activity.value["productcategory"]
+                quantity = turn_context.activity.value["quantidade"]
 
                 # Cria um conjunto de diálogos com o estado da conversa
                 dialog_state = self.conversation_state.create_property("DialogState")
@@ -56,7 +58,9 @@ class DialogBot(ActivityHandler):
                     {
                         "acao": "comprar",
                         "productId": product_id,
-                        "productName": product_name
+                        "productName": product_name,
+                        "productcategory": product_category,
+                        "quantidade": quantity
                     }
                 )
 
