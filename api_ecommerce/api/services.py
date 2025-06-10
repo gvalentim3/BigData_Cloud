@@ -80,6 +80,12 @@ class ProdutoService():
     def retira_quantidade_produto(self, id_produto, quantidade, categoria):
         try:
             current_item = self.container.read_item(id_produto, partition_key=categoria)
+
+            if quantidade > current_item['quantidade']: 
+                return Response(
+                    {"error": "Quantidade indisponível"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             current_item['quantidade'] -= quantidade
 
@@ -92,7 +98,7 @@ class ProdutoService():
             return Response(
                 {"error": "Produto não encontrado"},
                 status=status.HTTP_404_NOT_FOUND
-            )
+            )        
         except Exception as e:
             return Response(
                 {"error": str(e)},
