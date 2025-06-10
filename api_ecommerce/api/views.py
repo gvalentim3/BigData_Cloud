@@ -651,8 +651,8 @@ class PedidoCreateView(APIView):
                             "details": serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
         
-        cvv = serializer.cvv  # Acessa o CVV que foi removido
-        validated_data = serializer.validated_data  # Dados sem CVV
+        cvv = serializer.cvv
+        validated_data = serializer.validated_data
 
 
         try:
@@ -669,11 +669,14 @@ class PedidoCreateView(APIView):
             produto_service = ProdutoService(container=self.container_produtos)
 
             for produto in validated_data['produtos']:
-                produto_service.retira_quantidade_produto(
+                produto_response = produto_service.retira_quantidade_produto(
                     id_produto=produto['id_produto'],
                     quantidade=produto['quantidade'],
                     categoria=produto['categoria_produto']
                 )
+
+                if produto_response.status_code == status.HTTP_400_BAD_REQUEST:
+                    return transacao_response
 
             numero_pedido = PedidoService(self.container_pedidos).set_numero_pedido()
 

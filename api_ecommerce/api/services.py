@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.utils import timezone
 import uuid
 from rest_framework import status
@@ -80,6 +81,12 @@ class ProdutoService():
     def retira_quantidade_produto(self, id_produto, quantidade, categoria):
         try:
             current_item = self.container.read_item(id_produto, partition_key=categoria)
+
+            if quantidade > current_item['quantidade']: 
+                return Response(
+                    {"error": "Quantidade indisponível"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             
             current_item['quantidade'] -= quantidade
 
@@ -92,7 +99,7 @@ class ProdutoService():
             return Response(
                 {"error": "Produto não encontrado"},
                 status=status.HTTP_404_NOT_FOUND
-            )
+            )        
         except Exception as e:
             return Response(
                 {"error": str(e)},
@@ -126,18 +133,18 @@ class PedidoService():
         return cartao 
 
 class TransacaoService:
-    def autoriza_transacao(self, cartao: CartaoCredito, valor, cvv_request):
+    def autoriza_transacao(self, cartao: CartaoCredito, valor: Decimal, cvv_request):
         if not cartao.cvv == cvv_request:
             return self.error_response("CVV informado incorreto")
         
         if cartao.dt_expiracao < timezone.now().date():
             return self.error_response("Cartão expirado")
             
-        if cartao.saldo < valor:
+        if Decimal(cartao.saldo) < valor:
             return self.error_response("Saldo insuficiente")
         
-        cartao.saldo -= valor
-        cartao.save()
+        cartao.saldo = Decimal(cartao.saldo) - valor
+        cartao.save(update_fields=['saldo'])
 
         return self.success_response()
 

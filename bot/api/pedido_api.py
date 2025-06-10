@@ -4,7 +4,7 @@ from config import DefaultConfig
 class PedidoAPI:
     def __init__(self):
         self.config = DefaultConfig()
-        self.base_url = f"{self.config.URL_PREFIX}/api/pedidos"
+        self.base_url = f"{self.config.URL_PREFIX}/api/pedidos/"
 
     def post_pedidos(self, pedido_data):
         """
@@ -37,7 +37,7 @@ class PedidoAPI:
             return response.json()
         except requests.exceptions.HTTPError as http_err:
             print(f"[POST_PEDIDOS] HTTP Error: {http_err}")
-            return {"error": f"Erro HTTP: {http_err}"}
+            return {"mensagem": f"{response.json().get('mensagem', http_err)}"}
         except Exception as e:
             print(f"[POST_PEDIDOS] API Error: {e}")
             return {"error": "Falha ao criar pedido"}
@@ -67,7 +67,7 @@ class PedidoAPI:
                 }
         """
         try:
-            url = f"{self.base_url}/{pedido_id}"
+            url = f"{self.base_url}{pedido_id}"
             response = requests.get(url)
             response.raise_for_status()
             
