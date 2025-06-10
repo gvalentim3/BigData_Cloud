@@ -651,8 +651,8 @@ class PedidoCreateView(APIView):
                             "details": serializer.errors},
                             status=status.HTTP_400_BAD_REQUEST)
         
-        cvv = serializer.cvv  # Acessa o CVV que foi removido
-        validated_data = serializer.validated_data  # Dados sem CVV
+        cvv = serializer.cvv
+        validated_data = serializer.validated_data
 
 
         try:

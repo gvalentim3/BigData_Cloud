@@ -1,3 +1,4 @@
+from decimal import Decimal
 from django.utils import timezone
 import uuid
 from rest_framework import status
@@ -132,18 +133,18 @@ class PedidoService():
         return cartao 
 
 class TransacaoService:
-    def autoriza_transacao(self, cartao: CartaoCredito, valor, cvv_request):
+    def autoriza_transacao(self, cartao: CartaoCredito, valor: Decimal, cvv_request):
         if not cartao.cvv == cvv_request:
             return self.error_response("CVV informado incorreto")
         
         if cartao.dt_expiracao < timezone.now().date():
             return self.error_response("Cartão expirado")
             
-        if cartao.saldo < valor:
+        if Decimal(cartao.saldo) < valor:
             return self.error_response("Saldo insuficiente")
         
-        cartao.saldo -= valor
-        cartao.save()
+        cartao.saldo = Decimal(cartao.saldo) - valor
+        cartao.save(update_fields=['saldo'])
 
         return self.success_response()
 
