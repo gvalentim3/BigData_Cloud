@@ -14,22 +14,23 @@ class ComprarProdutoDialog(ComponentDialog):
         self.user_state = user_state
 
         # Prompts
-        self.add_dialog(TextPrompt("CategoriaPrompt"))
         self.add_dialog(TextPrompt("QuantidadePrompt", self.validate_quantidade))
         self.add_dialog(TextPrompt("CartaoIdPrompt", self.validate_id))
         self.add_dialog(TextPrompt("cvvPrompt", self.validate_cvv))
         self.add_dialog(TextPrompt("EnderecoIdPrompt", self.validate_id))
+        self.add_dialog(TextPrompt("ChoiceDentro"))
 
         self.add_dialog(
             WaterfallDialog(
                 "comprarProdutoWaterfall",
                 [
                     self.get_usuario_id_step,
-                    self.categoria_step,
                     self.quantidade_step,
                     self.cvv_step,
                     self.escolher_endereco_step,
                     self.confirmar_pedido_step,
+                    self.escolher_acao_apos_erro_step,
+                    self.next_action_step,
                 ]
             )
         )
@@ -60,20 +61,12 @@ class ComprarProdutoDialog(ComponentDialog):
 
         step_context.values["productId"] = step_context.options.get("productId")
         step_context.values["productName"] = step_context.options.get("productName")
+        step_context.values["categoria_produto"] = step_context.options.get("productcategory")
 
-        return await step_context.prompt(
-            "CategoriaPrompt",
-            PromptOptions(
-                prompt=MessageFactory.text("🗂 Digite a categoria do produto:"),
-            )
-        )
-
-    async def categoria_step(self, step_context: WaterfallStepContext):
-        step_context.values["categoria_produto"] = step_context.result
         return await step_context.prompt(
             "QuantidadePrompt",
             PromptOptions(
-                prompt=MessageFactory.text("🔢 Digite a quantidade desejada:"),
+                prompt=MessageFactory.text("#️⃣ Digite a quantidade desejada:"),
                 retry_prompt=MessageFactory.text("❌ Quantidade inválida. Digite um número maior que 0."),
             )
         )
@@ -156,7 +149,6 @@ class ComprarProdutoDialog(ComponentDialog):
 
     async def confirmar_pedido_step(self, step_context: WaterfallStepContext):
         step_context.values["id_endereco"] = int(step_context.result)
-
         pedido_api = PedidoAPI()
 
         pedido_data = {
@@ -172,7 +164,9 @@ class ComprarProdutoDialog(ComponentDialog):
         }
 
         response = pedido_api.post_pedidos(pedido_data)
-
+        if "mensagem" in response:
+            await step_context.context.send_activity(f"❌ Erro ao criar pedido: {response['mensagem']}")
+            return await step_context.next("erro_pedido")
         if "error" in response:
             await step_context.context.send_activity(f"❌ Erro ao criar pedido: {response['error']}")
         else:
@@ -194,3 +188,38 @@ class ComprarProdutoDialog(ComponentDialog):
             )
 
         return await step_context.end_dialog()
+    
+    async def escolher_acao_apos_erro_step(self, step_context: WaterfallStepContext):
+        result = step_context.result
+        # HeroCard com as opções após erro
+        card = HeroCard(
+            title="⚠️ O que você gostaria de fazer agora?",
+            buttons=[
+                CardAction(type=ActionTypes.post_back, title="🔁 Refazer o pedido", value="refazer_pedido"),
+                CardAction(type=ActionTypes.post_back, title="🏠 Voltar ao menu principal", value="voltar_menu"),
+            ],
+        )
+        await step_context.context.send_activity(MessageFactory.attachment(CardFactory.hero_card(card)))
+
+        return await step_context.prompt(
+            "ChoiceDentro",
+            PromptOptions(
+                prompt=MessageFactory.text("Clique em uma opção acima."),
+                retry_prompt=MessageFactory.text("❌ Opção inválida. Digite ou clique em 'refazer_pedido' ou 'voltar_menu'."),
+            ),
+        )
+
+
+    async def next_action_step(self, step_context: WaterfallStepContext):
+        option = step_context.result.lower()
+
+        if option == "refazer_pedido":
+            await step_context.context.send_activity("🔁 Vamos tentar refazer o pedido.")
+            return await step_context.replace_dialog(self.initial_dialog_id, step_context.options)
+
+        elif option == "voltar_menu":
+            await step_context.context.send_activity("🏠 Voltando ao menu principal...")
+            return await step_context.replace_dialog("MainDialog")
+
+        await step_context.context.send_activity("🤔 Não entendi sua escolha. Voltando ao menu principal.")
+        return await step_context.replace_dialog("MainDialog")

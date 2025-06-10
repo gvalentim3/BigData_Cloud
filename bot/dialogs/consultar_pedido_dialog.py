@@ -65,7 +65,7 @@ class ConsultarPedidoDialog(ComponentDialog):
         print(response)
 
         if "error" in response:
-            await step_context.context.send_activity(f"⚠️ {response['error']}")
+            await step_context.context.send_activity(f"⚠️ Pedido #{pedido_id} não encontrado.")
         else:
             await step_context.context.send_activity(self.criar_card_pedido(response))
 

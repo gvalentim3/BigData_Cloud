@@ -1,3 +1,4 @@
+import decimal
 from botbuilder.dialogs import ComponentDialog, WaterfallDialog, WaterfallStepContext
 from botbuilder.core import MessageFactory, UserState
 from botbuilder.dialogs.prompts import TextPrompt, PromptOptions
@@ -131,7 +132,13 @@ class ExtratoCartaoDialog(ComponentDialog):
                 f"💵 Valor total: R$ {pedido.get('preco_total')}\n"
                 f"📦 Produtos:\n{produtos_info}"
             )
-
+        
+        pedidos_total = decimal.Decimal(0)
+        for pedido in pedidos:
+            pedidos_total += decimal.Decimal(pedido.get("preco_total", 0))
+        await step_context.context.send_activity(
+            f"💰 Valor total dos pedidos: R$ {pedidos_total}"
+        )
         return await self.mostrar_opcoes(step_context)
 
     async def mostrar_opcoes(self, step_context):
