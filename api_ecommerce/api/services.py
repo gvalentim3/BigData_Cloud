@@ -138,7 +138,9 @@ class PedidoService():
         return cartao 
 
 class TransacaoService:
-    def autoriza_transacao(self, cartao: CartaoCredito, valor: Decimal, cvv_request):
+    def autoriza_transacao(self, cartao: CartaoCredito, valor, cvv_request):
+        valor = Decimal(str(valor))
+
         if not cartao.cvv == cvv_request:
             return self.error_response("CVV informado incorreto")
         
