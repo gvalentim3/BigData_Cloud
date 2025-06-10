@@ -94,6 +94,11 @@ class ProdutoService():
                 item=current_item['id'],
                 body=current_item
             )
+            
+            return Response(
+                    {"error": "Quantidade indisponível"},
+                    status=status.HTTP_200_OK
+            )
 
         except cosmos_exceptions.CosmosResourceNotFoundError:
             return Response(
