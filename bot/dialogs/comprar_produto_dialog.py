@@ -62,6 +62,7 @@ class ComprarProdutoDialog(ComponentDialog):
         step_context.values["productId"] = step_context.options.get("productId")
         step_context.values["productName"] = step_context.options.get("productName")
         step_context.values["categoria_produto"] = step_context.options.get("productcategory")
+        step_context.values["productquantidade"] = step_context.options.get("quantidade")
 
         return await step_context.prompt(
             "QuantidadePrompt",
@@ -73,7 +74,10 @@ class ComprarProdutoDialog(ComponentDialog):
 
     async def quantidade_step(self, step_context: WaterfallStepContext):
         step_context.values["quantidade"] = int(step_context.result)
-
+        quantidade_user = step_context.values["quantidade"]
+        if quantidade_user > step_context.values["productquantidade"]:
+            await step_context.context.send_activity("❌ Quantidade solicitada maior que a disponível. Tente novamente.")
+            return await step_context.replace_dialog(self.initial_dialog_id, step_context.options)
         # Buscar cartões
         user_profile_accessor = self.user_state.create_property("UserProfile")
         user_profile = await user_profile_accessor.get(step_context.context, UserProfile)

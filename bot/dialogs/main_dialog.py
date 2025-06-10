@@ -107,6 +107,7 @@ class MainDialog(ComponentDialog):
                         "productId": step_context.options["productId"],
                         "productName": step_context.options["productName"],
                         "productcategory": step_context.options["productcategory"],
+                        "quantidade": quantidade,
                     },
                 )
             elif acao == "voltar_menu":
