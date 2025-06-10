@@ -96,12 +96,17 @@ class MainDialog(ComponentDialog):
         # Se o diálogo foi iniciado com dados da compra, redireciona diretamente
         if isinstance(step_context.options, dict):
             acao = step_context.options.get("acao")
+            quantidade = step_context.options["quantidade"]
+            if acao == "comprar" and quantidade == 0:
+                await step_context.context.send_activity("❌ Produto esgotado.")
+                return await step_context.replace_dialog(self.initial_dialog_id)
             if acao == "comprar":
                 return await step_context.begin_dialog(
                     "ComprarProdutoDialog",
                     {
                         "productId": step_context.options["productId"],
                         "productName": step_context.options["productName"],
+                        "productcategory": step_context.options["productcategory"],
                     },
                 )
             elif acao == "voltar_menu":

@@ -45,9 +45,10 @@ class ConsultarProdutosDialog(ComponentDialog):
         except Exception as e:
             await step_context.context.send_activity(f"Erro ao consultar produtos: {str(e)}")
             return await step_context.replace_dialog("MainDialog")
+        
 
         if isinstance(response, dict) and "error" in response:
-            await step_context.context.send_activity(response["error"])
+            await step_context.context.send_activity("❌ Produto não encontrado.")
 
         elif isinstance(response, list) and not response:
             await step_context.context.send_activity("❌ Produto não encontrado.")
@@ -73,6 +74,8 @@ class ConsultarProdutosDialog(ComponentDialog):
                                     "acao": "comprar",
                                     "productId": produto["id"],
                                     "productName": produto["nome"],
+                                    "productcategory": produto["categoria"],
+                                    "quantidade": produto["quantidade"]
                                 },
                             )
                         ],

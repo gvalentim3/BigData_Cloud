@@ -37,7 +37,7 @@ class PedidoAPI:
             return response.json()
         except requests.exceptions.HTTPError as http_err:
             print(f"[POST_PEDIDOS] HTTP Error: {http_err}")
-            return {"error": f"Erro HTTP: {http_err}"}
+            return {"mensagem": f"{response.json().get('mensagem', http_err)}"}
         except Exception as e:
             print(f"[POST_PEDIDOS] API Error: {e}")
             return {"error": "Falha ao criar pedido"}
