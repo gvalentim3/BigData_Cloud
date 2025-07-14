@@ -3,7 +3,6 @@ Este é um projeto de e-commerce, feito para a disciplina Big Data e Cloud do IB
 Desenvolvido pelos alunos:
 - Gustavo Brito Chagas Valentim - 202201037709
 - Lucas Fernandes Mosqueira - 202203369016
-- Lucas Liduino de Oliveira e Cunha - 202202355471
 
 Funcionalidades principais: 
 - Criação, edição e remoção de usuários no banco relacional
